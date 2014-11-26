@@ -11,9 +11,10 @@
 #include <vector>
 #include <algorithm>
 #include <math.h>
+#include <map>
+#include <assert.h>
 
 using namespace std;
-
 
 
 class TravelingSalesmanProblem{
@@ -25,7 +26,7 @@ public:
     static TravelingSalesmanProblem *createFromStdin(){
         TravelingSalesmanProblem *instance = new TravelingSalesmanProblem();;
         cin >> instance->points;
-         instance->y = new double[instance->points];
+        instance->y = new double[instance->points];
         instance->x = new double[instance->points];
         instance->y = new double[instance->points];
         for (auto i = 0; i < instance->points; i++)
@@ -122,11 +123,88 @@ public:
         solvenaive(used, distance + closestDistance, bestIndex, depth + 1);
     }
     
+    void printBits(unsigned long bits) {
+        for (int i = 31; i >= 0; i--) {
+            cout << ((bits >> i) & 1) << " ";
+        }
+        cout << endl;
+    }
+    
+    double dynamicExact() {
+        int n = points;
+        map<unsigned long, map<int, double>> C;
+        for (int k = 1; k < n; k++) {
+            unsigned long v = 1;
+            v |= 1 << k;
+            printBits(v);
+            C[v][k] = dist(0, k);
+        }
+        for (int s = 3; s < n; s++) {
+            // Stack 1,2,3
+            unsigned long S = 0;
+            for (int i = 0; i < s; i++) {
+                S |= 1 << i;
+            }
+//            printBits(S);
+
+            /* Bit rage */
+            int currentBit = 0;
+            while (true) {
+                for (int k = 1; k < n; k++) {
+                    if ((S >> k) & 1) {
+                        double minimum = 999999999;
+                        unsigned long minimumS = 0;
+                        for (int m = 1; m < n; m++) {
+                            if (m != k && (m & 1) == 1) {
+                                unsigned long tmpS = S^(1 << k);
+                                double distance = dist(m, k);
+                                assert(C[tmpS][m] != 0);
+                                double tmpVal = C[tmpS][m] + distance;
+                                if (tmpVal < minimum) {
+                                    minimum = tmpVal;
+                                    minimumS = tmpS;
+                                }
+                            }
+                        }
+                        
+                        C[minimumS][k] = minimum;
+                    }
+                }
+                if (currentBit >= n-s) {
+                    break;
+                }
+                if (((S >> (currentBit+1)) & 1) == 0) {
+                    S += (1 << currentBit);
+                    currentBit++;
+                } else {
+                    int collidingOnes = 1;
+                    int i = 2;
+                    while ((S >> (currentBit+i)) & 1) {
+                        collidingOnes++;
+                        i++;
+                    }
+                    S += (1 << currentBit);
+                    for (int i = 0; i < collidingOnes; i++) {
+                        S |= 1 << i;
+                    }
+                    currentBit = 0;
+                }
+            }
+        }
+
+        double opt = 9999999;
+//        printBits((1 << ()n) - 1);
+        for (int k = 0; k < n; k++) {
+            double tmp = C[(1 << n) - 1][k];
+            opt = min(tmp, opt);
+        }
+        return opt;
+    }
+    
     vector<int> greedy() {
         vector<int> vector;
         int tour[points];
         bool used[points];
-        
         for (int i = 0; i < points; i++) {
             used[i] = false;
         }
@@ -152,16 +230,19 @@ public:
 
 
 int main(int argc, char **argv){
-    auto instance = TravelingSalesmanProblem::createFromStdin();
+    auto instance = TravelingSalesmanProblem::testInstance();
+    
+    cout << "Best solution " << instance->dynamicExact() << endl;
+    
+    //    for (auto node: instance->greedy()) {
+    //        cout << node << endl;
+    //    }
+    //    cout << instance->best << endl;
+    
+    //    instance->solvenaiveExactly(10, 0, 0);
+    //    cout << instance->best << endl;
     
     
-    for (auto node: instance->greedy()) {
-        cout << node << endl;
-    }
-//    cout << instance->best << endl;
-    
-//    instance->solvenaiveExactly(10, 0, 0);
-//    cout << instance->best << endl;
     delete instance;
     return 0;
 }

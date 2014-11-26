@@ -28,7 +28,6 @@ public:
         cin >> instance->points;
         instance->y = new double[instance->points];
         instance->x = new double[instance->points];
-        instance->y = new double[instance->points];
         for (auto i = 0; i < instance->points; i++)
             cin >> instance->x[i] >> instance->y[i];
         return instance;
@@ -65,7 +64,6 @@ public:
     double dist(int a, int b){
         return sqrt((x[a] - x[b])*(x[a] - x[b]) + (y[a] - y[b])*(y[a] - y[b]));
     }
-    
     
     double best = 9999999;
     void solvenaiveExactly(int pointsLeft, double distance, int current){
@@ -132,54 +130,67 @@ public:
     
     double dynamicExact() {
         int n = points;
+        map<unsigned long, map<int, int>> parent;
         map<unsigned long, map<int, double>> C;
-        for (int k = 1; k < n; k++) {
-            unsigned long v = 1;
-            v |= 1 << k;
-            printBits(v);
-            C[v][k] = dist(0, k);
+        for (int k = 0; k < n; k++) {
+            for (int j = 0; j < n; j++) {
+                unsigned long v = 0;
+                v |= 1 << j;
+                v |= 1 << k;
+                //printBits(v);
+                C[v][k] = dist(j, k);
+            }
         }
-        for (int s = 3; s < n; s++) {
+        for (int s = 3; s <= n; s++) {
             // Stack 1,2,3
             unsigned long S = 0;
             for (int i = 0; i < s; i++) {
                 S |= 1 << i;
             }
-//            printBits(S);
-
+            //            printBits(S);
+            
             /* Bit rage */
             int currentBit = 0;
             while (true) {
+                //cout << "s = " << S << endl;
                 for (int k = 1; k < n; k++) {
                     if ((S >> k) & 1) {
-                        double minimum = 999999999;
-                        unsigned long minimumS = 0;
+                        double minimum = 1e300;
                         for (int m = 1; m < n; m++) {
-                            if (m != k && (m & 1) == 1) {
-                                unsigned long tmpS = S^(1 << k);
+                            if (m != k && ((1<<m) & S)) {
+                                // k = nuvarande slutplats
+                                // m = platsen innan nuvarande slutplats
+                                unsigned long tmpS = S ^ (1 << k);
                                 double distance = dist(m, k);
-                                assert(C[tmpS][m] != 0);
+                                //cout << "S = " << S << endl;
+                                //cout << "tmpS = " << tmpS << endl;
+                                //cout << "m = " << m << endl;
+                                //cout << "k = " << k << endl;
+//                                assert(C[tmpS][m] != 0);
+                                //8 4 1
+                                //1101 1
+                                //1111
                                 double tmpVal = C[tmpS][m] + distance;
                                 if (tmpVal < minimum) {
+                                    parent[S][k] = m;
+                                    C[S][k] = tmpVal;
                                     minimum = tmpVal;
-                                    minimumS = tmpS;
                                 }
                             }
                         }
-                        
-                        C[minimumS][k] = minimum;
                     }
                 }
-                if (currentBit >= n-s) {
+                if (currentBit >= n - s) {
                     break;
                 }
-                if (((S >> (currentBit+1)) & 1) == 0) {
+                if (((S >> (currentBit + 1)) & 1) == 0) {
                     S += (1 << currentBit);
                     currentBit++;
-                } else {
+                }
+                else {
                     int collidingOnes = 1;
                     int i = 2;
-                    while ((S >> (currentBit+i)) & 1) {
+                    while ((S >> (currentBit + i)) & 1) {
                         collidingOnes++;
                         i++;
                     }
@@ -191,30 +202,42 @@ public:
                 }
             }
         }
-
+        
         double opt = 9999999;
-//        printBits((1 << ()n) - 1);
-        for (int k = 0; k < n; k++) {
-            double tmp = C[(1 << n) - 1][k];
+        //        printBits((1 << ()n) - 1);
+        int node = -1;
+        unsigned long S = (1 << n) - 1;
+        for (int k = 1; k < n; k++) {
+            double tmp = C[S][k];
             opt = min(tmp, opt);
+            node = k;
+        }
+
+        while (true) {
+            cout << node << endl;
+            if (node == 0) {
+                break;
+            }
+            int oldNode = node;
+            node = parent[S][node];
+            S = S^(1 << oldNode);
         }
         return opt;
     }
     
     vector<int> greedy() {
         vector<int> vector;
-        int tour[points];
-        bool used[points];
+        int *tour = new int[points];
+        bool *used = new bool[points];
         for (int i = 0; i < points; i++) {
             used[i] = false;
         }
-        
         tour[0] = 0;
         used[0] = true;
         for (int i = 1; i < points; i++) {
             int best = -1;
             for (int j = 0; j < points; j++) {
-                if (!used[j] && (best == -1 || dist(tour[i-1], j) < dist(tour[i-1], best))) {
+                if (!used[j] && (best == -1 || dist(tour[i - 1], j) < dist(tour[i - 1], best))) {
                     best = j;
                 }
             }
@@ -230,9 +253,8 @@ public:
 
 
 int main(int argc, char **argv){
-    auto instance = TravelingSalesmanProblem::testInstance();
-    
-    cout << "Best solution " << instance->dynamicExact() << endl;
+    auto instance = TravelingSalesmanProblem::createFromStdin();
+    instance->dynamicExact();
     
     //    for (auto node: instance->greedy()) {
     //        cout << node << endl;

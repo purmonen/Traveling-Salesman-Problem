@@ -19,13 +19,13 @@ using namespace std;
 class TravelingSalesmanProblem{
 public:
     int points;
-    
     double *x;
     double *y;
     
     static TravelingSalesmanProblem *createFromStdin(){
         TravelingSalesmanProblem *instance = new TravelingSalesmanProblem();;
         cin >> instance->points;
+         instance->y = new double[instance->points];
         instance->x = new double[instance->points];
         instance->y = new double[instance->points];
         for (auto i = 0; i < instance->points; i++)
@@ -67,7 +67,7 @@ public:
     
     
     double best = 9999999;
-    void solveNaieveExactly(int pointsLeft, double distance, int current){
+    void solvenaiveExactly(int pointsLeft, double distance, int current){
         if (pointsLeft == 1) best = min(best, distance + dist(current, 0));
         
         if (distance >= best) return;
@@ -75,14 +75,13 @@ public:
         {
             swap(x[i], x[pointsLeft - 1]);
             swap(y[i], y[pointsLeft - 1]);
-            solveNaieveExactly(pointsLeft - 1, distance + dist(current, pointsLeft - 1), pointsLeft - 1);
+            solvenaiveExactly(pointsLeft - 1, distance + dist(current, pointsLeft - 1), pointsLeft - 1);
             swap(y[i], y[pointsLeft - 1]);
             swap(x[i], x[pointsLeft - 1]);
         }
-        
     }
     
-    void solveNaieve2(int pointsLeft, double distance, int current){
+    void solvenaive2(int pointsLeft, double distance, int current){
         if (pointsLeft == 1) best = min(best, distance + dist(current, 0));
         
         
@@ -97,14 +96,17 @@ public:
         }
         swap(x[bestIndex], x[pointsLeft - 1]);
         swap(y[bestIndex], y[pointsLeft - 1]);
-        solveNaieveExactly(pointsLeft - 1, distance + closestDistance, pointsLeft - 1);
+        solvenaiveExactly(pointsLeft - 1, distance + closestDistance, pointsLeft - 1);
         swap(y[bestIndex], y[pointsLeft - 1]);
         swap(x[bestIndex], x[pointsLeft - 1]);
         
     }
     
-    void solveNaieve(vector<int> used, double distance, int current, int depth){
-        if (used.size() == points) { best = distance + dist(current, 0); return; }
+    void solvenaive(vector<int> &used, double distance, int current, int depth){
+        if (used.size() == points) {
+            best = distance + dist(current, 0);
+            return;
+        }
         
         auto bestIndex = 0;
         double closestDistance = 9999999;
@@ -117,24 +119,49 @@ public:
         }
         
         used.push_back(bestIndex);
-        solveNaieve(used, distance + closestDistance, bestIndex, depth + 1);
-        
+        solvenaive(used, distance + closestDistance, bestIndex, depth + 1);
     }
     
+    vector<int> greedy() {
+        vector<int> vector;
+        int tour[points];
+        bool used[points];
+        
+        for (int i = 0; i < points; i++) {
+            used[i] = false;
+        }
+        
+        tour[0] = 0;
+        used[0] = true;
+        for (int i = 1; i < points; i++) {
+            int best = -1;
+            for (int j = 0; j < points; j++) {
+                if (!used[j] && (best == -1 || dist(tour[i-1], j) < dist(tour[i-1], best))) {
+                    best = j;
+                }
+            }
+            tour[i] = best;
+            used[best] = true;
+        }
+        for (int i = 0; i < points; i++) {
+            vector.push_back(tour[i]);
+        }
+        return vector;
+    }
 };
 
 
 int main(int argc, char **argv){
+    auto instance = TravelingSalesmanProblem::createFromStdin();
     
     
-    auto instance = TravelingSalesmanProblem::testInstance();
-    vector<int> vector;
-    instance->solveNaieve(vector, 0, 0, 0);
-    vector.clear();
-    cout << instance->best << endl;
+    for (auto node: instance->greedy()) {
+        cout << node << endl;
+    }
+//    cout << instance->best << endl;
     
-    instance->solveNaieveExactly(10, 0, 0);
-    cout << instance->best << endl;
+//    instance->solvenaiveExactly(10, 0, 0);
+//    cout << instance->best << endl;
     delete instance;
     return 0;
 }

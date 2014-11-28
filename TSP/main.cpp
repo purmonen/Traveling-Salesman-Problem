@@ -19,6 +19,14 @@
 using namespace std;
 auto startTime = chrono::high_resolution_clock::now();
 
+template <typename T>
+void printVector(vector<T> v) {
+    for (auto i: v) {
+        cerr << i << " ";
+    }
+    cerr << endl;
+}
+
 class TravelingSalesmanProblem{
 public:
     int points;
@@ -319,45 +327,39 @@ public:
         return tour;
     }
     
-    
-    vector<int> kopt3(vector<int> tour) {
+    vector<int> realkopt(vector<int> tour) {
         int timeout = 1500;
         
-        list<int> a(10);
-        
-        while (startTime + chrono::milliseconds(timeout) > chrono::high_resolution_clock::now()) {
+        while (true) {
             bool didSwap = false;
             for (int i = 0; i < tour.size(); i++) {
                 if (startTime + chrono::milliseconds(timeout) < chrono::high_resolution_clock::now()) {
+                    cerr << "Time out" << endl;
                     break;
                 }
-                for (int j = 0; j < tour.size(); j++) {
-                    
-                    for (int k = 0; k < tour.size(); k++) {
+                for (int j = i+2; j < tour.size(); j++) {
+                    if (i != j) {
+                        //                        int prevI = i-1 >= 0 ? i-1 : tour.size()-1;
+                        //                        int prevJ = j-1 >= 0 ? j-1 : tour.size()-1;
+                        //                        int nextI = i+1 < tour.size() ? i+1 : 0;
+                        //                        int nextJ = j+1 < tour.size() ? j+1 : 0;
+                        //                        double prevDistanceI = dist(tour[prevI], tour[i]) + dist(tour[i], tour[nextI]);
+                        //                        double prevDistanceJ = dist(tour[prevJ], tour[j]) + dist(tour[j], tour[nextJ]);
                         
-                        if (i != j && j != k && i != k) {
-                            int prevI = i-1 >= 0 ? i-1 : tour.size()-1;
-                            int prevJ = j-1 >= 0 ? j-1 : tour.size()-1;
-                            int prevK = k-1 >= 0 ? k-1 : tour.size()-1;
-                            int nextI = i+1 < tour.size() ? i+1 : 0;
-                            int nextJ = j+1 < tour.size() ? j+1 : 0;
-                            int nextK = k+1 < tour.size() ? k+1 : 0;
-                            
-                            double prevDistanceI = dist(tour[prevI], tour[i]) + dist(tour[i], tour[nextI]);
-                            double prevDistanceJ = dist(tour[prevJ], tour[j]) + dist(tour[j], tour[nextJ]);
-                            double prevDistanceK = dist(tour[prevK], tour[k]) + dist(tour[k], tour[nextK]);
-                            swap(tour[j], tour[i]);
-                            swap(tour[j], tour[k]);
-                            double afterDistanceI = dist(tour[prevI], tour[i]) + dist(tour[i], tour[nextI]);
-                            double afterDistanceJ = dist(tour[prevJ], tour[j]) + dist(tour[j], tour[nextJ]);
-                            double afterDistanceK = dist(tour[prevK], tour[k]) + dist(tour[k], tour[nextK]);
-                            if (afterDistanceI + afterDistanceJ + afterDistanceK < prevDistanceI + prevDistanceJ+ prevDistanceK) {
-                                //                            cout << "Swapping" << endl;
-                                didSwap = true;
-                            } else {
-                                swap(tour[j], tour[i]);
-                                swap(tour[j], tour[k]);
-                            }
+                        double prevDistance = tourDistance(tour);
+                        
+                        //                        cout << "Reversing " << tour[i] << ", " << tour[j] << endl;
+                        //                        printVector(tour);
+                        reverse(&tour[i], &tour[j]);
+                        //                        printVector(tour);
+                        double afterDistance = tourDistance(tour);
+                        //                        double afterDistanceI = dist(tour[prevI], tour[i]) + dist(tour[i], tour[nextI]);
+                        //                        double afterDistanceJ = dist(tour[prevJ], tour[j]) + dist(tour[j], tour[nextJ]);
+                        if (afterDistance < prevDistance) {
+                            //                            cout << "Swapping" << endl;
+                            didSwap = true;
+                        } else {
+                            reverse(&tour[i], &tour[j]);
                         }
                     }
                 }
@@ -371,20 +373,23 @@ public:
 };
 
 
+
+
 int main(int argc, char **argv){
-    auto instance = TravelingSalesmanProblem::testInstance();
+    auto instance = TravelingSalesmanProblem::createFromStdin();
     //    if (instance->points <= 19) {
     //        instance->dynamicExact();
     //    } else {
     //        instance->greedy();
     //    }
     
-    auto tour = instance->kopt(instance->greedy());
-    for (auto node: tour) {
-        cout << node << endl;
-    }
+    auto tour = instance->realkopt(instance->greedy());
     //            cout << instance->tourDistance(instance->greerdy()) << endl;
-                cout << instance->tourDistance(tour) << endl;
+    cerr << instance->tourDistance(tour) << endl;
+    for (auto i: tour) {
+        cout << i << endl;
+    }
+    
     
     //    instance->solvenaiveExactly(10, 0, 0);
     //    cout << instance->best << endl;

@@ -328,7 +328,7 @@ public:
     }
     
     vector<int> realkopt(vector<int> tour) {
-        int timeout = 1500;
+        int timeout = 1900;
         
         while (true) {
             bool didSwap = false;
@@ -338,31 +338,22 @@ public:
                     break;
                 }
                 for (int j = i+2; j < tour.size(); j++) {
-                    if (i != j) {
-                        //                        int prevI = i-1 >= 0 ? i-1 : tour.size()-1;
-                        //                        int prevJ = j-1 >= 0 ? j-1 : tour.size()-1;
-                        //                        int nextI = i+1 < tour.size() ? i+1 : 0;
-                        //                        int nextJ = j+1 < tour.size() ? j+1 : 0;
-                        //                        double prevDistanceI = dist(tour[prevI], tour[i]) + dist(tour[i], tour[nextI]);
-                        //                        double prevDistanceJ = dist(tour[prevJ], tour[j]) + dist(tour[j], tour[nextJ]);
-                        
-                        double prevDistance = tourDistance(tour);
-                        
-                        //                        cout << "Reversing " << tour[i] << ", " << tour[j] << endl;
-                        //                        printVector(tour);
-                        reverse(&tour[i], &tour[j]);
-                        //                        printVector(tour);
-                        double afterDistance = tourDistance(tour);
-                        //                        double afterDistanceI = dist(tour[prevI], tour[i]) + dist(tour[i], tour[nextI]);
-                        //                        double afterDistanceJ = dist(tour[prevJ], tour[j]) + dist(tour[j], tour[nextJ]);
-                        if (afterDistance < prevDistance) {
-                            //                            cout << "Swapping" << endl;
-                            didSwap = true;
-                        } else {
-                            reverse(&tour[i], &tour[j]);
-                        }
+                    //                                                int prevI = i-1 >= 0 ? i-1 : tour.size()-1;
+                    //                                                int prevJ = j-1 >= 0 ? j-1 : tour.size()-1;
+                    //                                                int nextI = i+1 < tour.size() ? i+1 : 0;
+                    int nextJ = j+1 < tour.size() ? j+1 : 0;
+                    //                        double prevDistanceI = dist(tour[prevI], tour[i]) + dist(tour[i], tour[nextI]);
+                    //                        double prevDistanceJ = dist(tour[prevJ], tour[j]) + dist(tour[j], tour[nextJ]);
+                    
+                    //                        double prevDistance = tourDistance(tour);
+                    double prevDistance2 = dist(tour[i], tour[i+1]) + dist(tour[j], tour[nextJ]);
+                    double afterDistance2 = dist(tour[i], tour[j]) + dist(tour[i+1], tour[nextJ]);
+                    if (afterDistance2 < prevDistance2) {
+                        reverse(&tour[i+1], &tour[j+1]);
+                        didSwap = true;
                     }
                 }
+                
             }
             if (!didSwap) {
                 break;
@@ -384,6 +375,7 @@ int main(int argc, char **argv){
     //    }
     
     auto tour = instance->realkopt(instance->greedy());
+    tour = instance->kopt(tour);
     //            cout << instance->tourDistance(instance->greerdy()) << endl;
     cerr << instance->tourDistance(tour) << endl;
     for (auto i: tour) {

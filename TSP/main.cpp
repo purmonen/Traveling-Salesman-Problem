@@ -73,14 +73,20 @@ public:
             }
         }
         //
+        //        for (int i = 0; i < instance->points; i++) {
+        //            cerr << "Neighbors of " << i << endl;
+        //            for (int j = 0; j < instance->points; j++) {
+        //                int neighbor = instance->neighbors[i*instance->points+j];
+        //                cerr << "(" << neighbor << "," << instance->dist(i, neighbor) << ") " ;
+        //            }
+        //            cerr << endl;
+        //        }
+        //
     }
     
     static TravelingSalesmanProblem *testInstance(){
         TravelingSalesmanProblem *instance = new TravelingSalesmanProblem();
-        
         instance->points = 10;
-        
-        
         instance->x = new double[instance->points];
         instance->y = new double[instance->points];
         instance->x[0] = 95.0129;		//	95.0129 61.5432
@@ -105,15 +111,7 @@ public:
         instance->y[9] = 89.3650;
         
         initInstance(instance);
-//        
-//        for (int i = 0; i < instance->points; i++) {
-//            cerr << "Neighbors of " << i << endl;
-//            for (int j = 0; j < instance->points; j++) {
-//                int neighbor = instance->neighbors[i*instance->points+j];
-//                cerr << "(" << neighbor << "," << instance->dist(i, neighbor) << ") " ;
-//            }
-//            cerr << endl;
-//        }
+
         
         return instance;
     }
@@ -122,164 +120,11 @@ public:
         return distance[a * points+b];
     }
     
-    double best = 9999999;
-    void solvenaiveExactly(int pointsLeft, double distance, int current){
-        if (pointsLeft == 1) best = min(best, distance + dist(current, 0));
-        
-        if (distance >= best) return;
-        for (auto i = 1; i < pointsLeft; i++)
-        {
-            swap(x[i], x[pointsLeft - 1]);
-            swap(y[i], y[pointsLeft - 1]);
-            solvenaiveExactly(pointsLeft - 1, distance + dist(current, pointsLeft - 1), pointsLeft - 1);
-            swap(y[i], y[pointsLeft - 1]);
-            swap(x[i], x[pointsLeft - 1]);
-        }
-    }
-    
-    void solvenaive2(int pointsLeft, double distance, int current){
-        if (pointsLeft == 1) best = min(best, distance + dist(current, 0));
-        
-        
-        auto bestIndex = 0;
-        double closestDistance = 9999999;
-        for (auto i = 1; i < pointsLeft; i++)
-        {
-            if (dist(current, i) < closestDistance){
-                closestDistance = dist(current, i);
-                bestIndex = i;
-            }
-        }
-        swap(x[bestIndex], x[pointsLeft - 1]);
-        swap(y[bestIndex], y[pointsLeft - 1]);
-        solvenaiveExactly(pointsLeft - 1, distance + closestDistance, pointsLeft - 1);
-        swap(y[bestIndex], y[pointsLeft - 1]);
-        swap(x[bestIndex], x[pointsLeft - 1]);
-        
-    }
-    
-    void solvenaive(vector<int> &used, double distance, int current, int depth){
-        if (used.size() == points) {
-            best = distance + dist(current, 0);
-            return;
-        }
-        
-        auto bestIndex = 0;
-        double closestDistance = 9999999;
-        for (int i = 0; i < points; i++){
-            if (find(used.begin(), used.end(), i) != used.end()) continue;
-            if (dist(current, i) < closestDistance){
-                closestDistance = dist(current, i);
-                bestIndex = i;
-            }
-        }
-        
-        used.push_back(bestIndex);
-        solvenaive(used, distance + closestDistance, bestIndex, depth + 1);
-    }
-    
     void printBits(unsigned long bits) {
         for (int i = 31; i >= 0; i--) {
             cout << ((bits >> i) & 1) << " ";
         }
         cout << endl;
-    }
-    
-    double dynamicExact() {
-        int n = points;
-        map<unsigned long, map<int, int>> parent;
-        map<unsigned long, map<int, double>> C;
-        for (int k = 0; k < n; k++) {
-            for (int j = 0; j < n; j++) {
-                unsigned long v = 0;
-                v |= 1 << j;
-                v |= 1 << k;
-                //printBits(v);
-                C[v][k] = dist(j, k);
-            }
-        }
-        for (int s = 3; s <= n; s++) {
-            // Stack 1,2,3
-            unsigned long S = 0;
-            for (int i = 0; i < s; i++) {
-                S |= 1 << i;
-            }
-            //            printBits(S);
-            
-            /* Bit rage */
-            int currentBit = 0;
-            while (true) {
-                //cout << "s = " << S << endl;
-                for (int k = 1; k < n; k++) {
-                    if ((S >> k) & 1) {
-                        double minimum = 1e300;
-                        for (int m = 1; m < n; m++) {
-                            if (m != k && ((1<<m) & S)) {
-                                // k = nuvarande slutplats
-                                // m = platsen innan nuvarande slutplats
-                                unsigned long tmpS = S ^ (1 << k);
-                                double distance = dist(m, k);
-                                //cout << "S = " << S << endl;
-                                //cout << "tmpS = " << tmpS << endl;
-                                //cout << "m = " << m << endl;
-                                //cout << "k = " << k << endl;
-                                //                                assert(C[tmpS][m] != 0);
-                                //8 4 1
-                                //1101 1
-                                //1111
-                                double tmpVal = C[tmpS][m] + distance;
-                                if (tmpVal < minimum) {
-                                    parent[S][k] = m;
-                                    C[S][k] = tmpVal;
-                                    minimum = tmpVal;
-                                }
-                            }
-                        }
-                    }
-                }
-                if (currentBit >= n - s) {
-                    break;
-                }
-                if (((S >> (currentBit + 1)) & 1) == 0) {
-                    S += (1 << currentBit);
-                    currentBit++;
-                }
-                else {
-                    int collidingOnes = 1;
-                    int i = 2;
-                    while ((S >> (currentBit + i)) & 1) {
-                        collidingOnes++;
-                        i++;
-                    }
-                    S += (1 << currentBit);
-                    for (int i = 0; i < collidingOnes; i++) {
-                        S |= 1 << i;
-                    }
-                    currentBit = 0;
-                }
-            }
-        }
-        
-        double opt = 9999999;
-        //        printBits((1 << ()n) - 1);
-        int node = 0;
-        unsigned long S = (1 << n) - 1;
-        for (int k = 1; k < n; k++) {
-            double tmp = C[S][k];
-            opt = min(tmp, opt);
-            node = k;
-        }
-        
-        while (true) {
-            cout << node << endl;
-            if (node == 0) {
-                break;
-            }
-            int oldNode = node;
-            node = parent[S][node];
-            S = S^(1 << oldNode);
-        }
-        return opt;
     }
     
     vector<int> greedy() {
@@ -358,7 +203,7 @@ public:
         while (true) {
             bool didSwap = false;
             for (int i = 0; i < tour.size(); i++) {
-                for (int n = 0; n < min(11, points); n++) {
+                for (int n = 0; n < min(10, points); n++) {
                     int j = neighbors[i*points+n];
                     if (i != j && j >= i+2) {
                         if (startTime + chrono::milliseconds(timeout) < chrono::high_resolution_clock::now()) {

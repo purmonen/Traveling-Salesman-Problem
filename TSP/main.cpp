@@ -19,6 +19,12 @@
 using namespace std;
 auto startTime = chrono::high_resolution_clock::now();
 
+int timeout = 1500;
+
+bool timeIsRunningOut() {
+    return startTime + chrono::milliseconds(timeout) < chrono::high_resolution_clock::now();
+}
+
 template <typename T>
 void printVector(vector<T> v) {
     for (auto i: v) {
@@ -72,16 +78,16 @@ public:
                 instance->neighbors[i*instance->points+k+1] = j;
             }
         }
-        //
-        //        for (int i = 0; i < instance->points; i++) {
-        //            cerr << "Neighbors of " << i << endl;
-        //            for (int j = 0; j < instance->points; j++) {
-        //                int neighbor = instance->neighbors[i*instance->points+j];
-        //                cerr << "(" << neighbor << "," << instance->dist(i, neighbor) << ") " ;
-        //            }
-        //            cerr << endl;
-        //        }
-        //
+        
+//                for (int i = 0; i < instance->points; i++) {
+//                    cerr << "Neighbors of " << i << endl;
+//                    for (int j = 0; j < instance->points; j++) {
+//                        int neighbor = instance->neighbors[i*instance->points+j];
+//                        cerr << "(" << neighbor << ", " << instance->dist(i, neighbor) << ") " ;
+//                    }
+//                    cerr << endl;
+//                }
+        
     }
     
     static TravelingSalesmanProblem *testInstance(){
@@ -162,14 +168,12 @@ public:
     }
     
     vector<int> kopt2(vector<int> tour) {
-        int timeout = 1500;
-        
         while (true) {
             bool didSwap = false;
             for (int i = 0; i < tour.size(); i++) {
                 
                 for (int j = i+2; j < tour.size(); j++) {
-                    if (startTime + chrono::milliseconds(timeout) < chrono::high_resolution_clock::now()) {
+                    if (timeIsRunningOut()) {
                         cerr << "Time out" << endl;
                         return tour;
                     }
@@ -198,26 +202,17 @@ public:
     }
     
     vector<int> kopt2neighbors(vector<int> tour) {
-        int timeout = 1300;
-        
         while (true) {
             bool didSwap = false;
             for (int i = 0; i < tour.size(); i++) {
                 for (int n = 0; n < min(10, points); n++) {
                     int j = neighbors[i*points+n];
                     if (i != j && j >= i+2) {
-                        if (startTime + chrono::milliseconds(timeout) < chrono::high_resolution_clock::now()) {
+                        if (timeIsRunningOut()) {
                             cerr << "Time out" << endl;
                             return tour;
                         }
-                        //                                                int prevI = i-1 >= 0 ? i-1 : tour.size()-1;
-                        //                                                int prevJ = j-1 >= 0 ? j-1 : tour.size()-1;
-                        //                                                int nextI = i+1 < tour.size() ? i+1 : 0;
                         int nextJ = j+1 < tour.size() ? j+1 : 0;
-                        //                        double prevDistanceI = dist(tour[prevI], tour[i]) + dist(tour[i], tour[nextI]);
-                        //                        double prevDistanceJ = dist(tour[prevJ], tour[j]) + dist(tour[j], tour[nextJ]);
-                        
-                        //                        double prevDistance = tourDistance(tour);
                         double prevDistance2 = dist(tour[i], tour[i+1]) + dist(tour[j], tour[nextJ]);
                         double afterDistance2 = dist(tour[i], tour[j]) + dist(tour[i+1], tour[nextJ]);
                         if (afterDistance2 < prevDistance2) {
@@ -237,14 +232,13 @@ public:
     
     
     vector<int> kopt3(vector<int> tour) {
-        int timeout = 1500;
         
         while (true) {
             bool didSwap = false;
             for (int i = 0; i < tour.size(); i++) {
                 for (int j = i+2; j < tour.size(); j++) {
                     for (int k = j+2; k < tour.size(); k++) {
-                        if (startTime + chrono::milliseconds(timeout) < chrono::high_resolution_clock::now()) {
+                        if (timeIsRunningOut()) {
                             cerr << "Time out" << endl;
                             return tour;
                         }
@@ -282,9 +276,8 @@ int main(int argc, char **argv){
     vector<int> minimumTour = tour;
     double minimumDistance = instance->tourDistance(tour);
     
-    int timeout = 1000;
     while (true) {
-        if (startTime + chrono::milliseconds(timeout) < chrono::high_resolution_clock::now()) {
+        if (timeIsRunningOut()) {
             cerr << "Time out" << endl;
             break;
         }

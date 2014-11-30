@@ -33,6 +33,7 @@ public:
     double *x;
     double *y;
     double *distance;
+    int *neighbors;
     
     static TravelingSalesmanProblem *createFromStdin(){
         TravelingSalesmanProblem *instance = new TravelingSalesmanProblem();;
@@ -42,18 +43,41 @@ public:
         instance->x = new double[instance->points];
         for (auto i = 0; i < instance->points; i++)
             cin >> instance->x[i] >> instance->y[i];
-        
-        for (int i = 0; i < instance->points; i++) {
-            for (int j = 0; j < instance->points; j++) {
-                instance->distance[i*instance->points+j] = (instance->x[i]-instance->x[j])*(instance->x[i]-instance->x[j]) + (instance->y[i]-instance->y[j])*(instance->y[i]-instance->y[j]);
-                
-            }
-        }
+        initInstance(instance);
         return instance;
     }
     
+    static void initInstance(TravelingSalesmanProblem *instance) {
+        instance->distance = new double[instance->points * instance->points];
+        instance->neighbors = new int[instance->points * instance->points];
+        
+        for (int i = 0; i < instance->points; i++) {
+            for (int j = 0; j < instance->points; j++) {
+                instance->distance[i*instance->points+j] = sqrt((instance->x[i]-instance->x[j])*(instance->x[i]-instance->x[j]) + (instance->y[i]-instance->y[j])*(instance->y[i]-instance->y[j]));
+            }
+        }
+        
+        for (int i = 0; i < instance->points; i++) {
+            for (int j = 0; j < instance->points; j++) {
+                instance->neighbors[i*instance->points+j] = j;
+            }
+            for (int j = 1; j < instance->points; j++) {
+                int k = j-1;
+                int jValue = instance->neighbors[i*instance->points+j];
+                int jDistance = instance->dist(i, jValue);
+                while (instance->dist(i, instance->neighbors[i*instance->points+k]) > jDistance && k >= 0) {
+                    instance->neighbors[i*instance->points+k+1] = instance->neighbors[i*instance->points+k];
+                    k--;
+                }
+                instance->neighbors[i*instance->points+k+1] = j;
+            }
+        }
+        //
+    }
+    
     static TravelingSalesmanProblem *testInstance(){
-        TravelingSalesmanProblem *instance = new TravelingSalesmanProblem();;
+        TravelingSalesmanProblem *instance = new TravelingSalesmanProblem();
+        
         instance->points = 10;
         
         
@@ -80,14 +104,16 @@ public:
         instance->x[9] = 44.4703;		//	44.4703 89.3650
         instance->y[9] = 89.3650;
         
-        
-        instance->distance = new double[instance->points * instance->points];
-        for (int i = 0; i < instance->points; i++) {
-            for (int j = 0; j < instance->points; j++) {
-                instance->distance[i*instance->points+j] = sqrt((instance->x[i]-instance->x[j])*(instance->x[i]-instance->x[j]) + (instance->y[i]-instance->y[j])*(instance->y[i]-instance->y[j]));
-                
-            }
-        }
+        initInstance(instance);
+//        
+//        for (int i = 0; i < instance->points; i++) {
+//            cerr << "Neighbors of " << i << endl;
+//            for (int j = 0; j < instance->points; j++) {
+//                int neighbor = instance->neighbors[i*instance->points+j];
+//                cerr << "(" << neighbor << "," << instance->dist(i, neighbor) << ") " ;
+//            }
+//            cerr << endl;
+//        }
         
         return instance;
     }
@@ -326,6 +352,45 @@ public:
         return tour;
     }
     
+    vector<int> kopt2neighbors(vector<int> tour) {
+        int timeout = 1300;
+        
+        while (true) {
+            bool didSwap = false;
+            for (int i = 0; i < tour.size(); i++) {
+                for (int n = 0; n < min(11, points); n++) {
+                    int j = neighbors[i*points+n];
+                    if (i != j && j >= i+2) {
+                        if (startTime + chrono::milliseconds(timeout) < chrono::high_resolution_clock::now()) {
+                            cerr << "Time out" << endl;
+                            return tour;
+                        }
+                        //                                                int prevI = i-1 >= 0 ? i-1 : tour.size()-1;
+                        //                                                int prevJ = j-1 >= 0 ? j-1 : tour.size()-1;
+                        //                                                int nextI = i+1 < tour.size() ? i+1 : 0;
+                        int nextJ = j+1 < tour.size() ? j+1 : 0;
+                        //                        double prevDistanceI = dist(tour[prevI], tour[i]) + dist(tour[i], tour[nextI]);
+                        //                        double prevDistanceJ = dist(tour[prevJ], tour[j]) + dist(tour[j], tour[nextJ]);
+                        
+                        //                        double prevDistance = tourDistance(tour);
+                        double prevDistance2 = dist(tour[i], tour[i+1]) + dist(tour[j], tour[nextJ]);
+                        double afterDistance2 = dist(tour[i], tour[j]) + dist(tour[i+1], tour[nextJ]);
+                        if (afterDistance2 < prevDistance2) {
+                            reverse(&tour[i+1], &tour[j+1]);
+                            didSwap = true;
+                        }
+                    }
+                }
+                
+            }
+            if (!didSwap) {
+                break;
+            }
+        }
+        return tour;
+    }
+    
+    
     vector<int> kopt3(vector<int> tour) {
         int timeout = 1500;
         
@@ -368,17 +433,17 @@ int main(int argc, char **argv){
 #else
     auto instance = TravelingSalesmanProblem::createFromStdin();
 #endif
-    auto tour = instance->kopt2(instance->greedy());
+    auto tour = instance->greedy();
     vector<int> minimumTour = tour;
     double minimumDistance = instance->tourDistance(tour);
     
-    int timeout = 1500;
+    int timeout = 1000;
     while (true) {
         if (startTime + chrono::milliseconds(timeout) < chrono::high_resolution_clock::now()) {
             cerr << "Time out" << endl;
             break;
         }
-        tour = instance->kopt2(tour);
+        tour = instance->kopt2neighbors(tour);
         double distance = instance->tourDistance(tour);
         if (distance < minimumDistance) {
             minimumDistance = distance;
@@ -387,15 +452,10 @@ int main(int argc, char **argv){
         random_shuffle(tour.begin(), tour.end());
     }
     
-    //            cout << instance->tourDistance(instance->greerdy()) << endl;
     cerr << instance->tourDistance(minimumTour) << endl;
     for (auto i: minimumTour) {
         cout << i << endl;
     }
-    
-    
-    //    instance->solvenaiveExactly(10, 0, 0);
-    //    cout << instance->best << endl;
     
     
     delete instance;

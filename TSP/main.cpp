@@ -88,6 +88,7 @@ public:
                 
             }
         }
+        
         return instance;
     }
     
@@ -362,30 +363,29 @@ public:
 
 
 int main(int argc, char **argv){
+#ifdef DEBUG
     auto instance = TravelingSalesmanProblem::testInstance();
-    //    if (instance->points <= 19) {
-    //        instance->dynamicExact();
-    //    } else {
-    //        instance->greedy();
-    //    }
-    auto tour = instance->kopt3(instance->greedy());
+#else
+    auto instance = TravelingSalesmanProblem::createFromStdin();
+#endif
+    auto tour = instance->kopt2(instance->greedy());
     vector<int> minimumTour = tour;
     double minimumDistance = instance->tourDistance(tour);
     
     int timeout = 1500;
-//    while (true) {
-//        if (startTime + chrono::milliseconds(timeout) < chrono::high_resolution_clock::now()) {
-//            cerr << "Time out" << endl;
-//            break;
-//        }
-//        tour = instance->kopt3(tour);
-//        double distance = instance->tourDistance(tour);
-//        if (distance < minimumDistance) {
-//            minimumDistance = distance;
-//            minimumTour = tour;
-//        }
-//        random_shuffle(tour.begin(), tour.end());
-//    }
+    while (true) {
+        if (startTime + chrono::milliseconds(timeout) < chrono::high_resolution_clock::now()) {
+            cerr << "Time out" << endl;
+            break;
+        }
+        tour = instance->kopt2(tour);
+        double distance = instance->tourDistance(tour);
+        if (distance < minimumDistance) {
+            minimumDistance = distance;
+            minimumTour = tour;
+        }
+        random_shuffle(tour.begin(), tour.end());
+    }
     
     //            cout << instance->tourDistance(instance->greerdy()) << endl;
     cerr << instance->tourDistance(minimumTour) << endl;

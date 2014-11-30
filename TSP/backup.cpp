@@ -9,7 +9,7 @@ using namespace std;
 auto startTime = chrono::high_resolution_clock::now();
 
 inline bool timeIsRunningOut() {
-    return startTime + chrono::milliseconds(1500) < chrono::high_resolution_clock::now();
+    return startTime + chrono::milliseconds(1400) < chrono::high_resolution_clock::now();
 }
 
 template <typename T>
@@ -172,6 +172,7 @@ public:
                         didSwap = true;
                     }
                 }
+                
             }
             if (!didSwap) {
                 break;
@@ -241,6 +242,8 @@ public:
     }
     
 };
+
+
 
 
 int main(int argc, char **argv){

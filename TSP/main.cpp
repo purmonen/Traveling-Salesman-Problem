@@ -271,14 +271,15 @@ int main(int argc, char **argv) {
     double minimumDistance = instance->tourDistance(tour);
     while (!timeIsRunningOut()) {
         tour = greedyTour;
+        int iteration = 800;
         while(!timeIsRunningOut()) {
+            iteration--;
             if (!instance->kopt2(tour, rand() % instance->points)) {
-                break;
-            }
-        }
-        for (int i = 0; i < 6000; i++) {
-            if (!timeIsRunningOut()) {
-                instance->kopt2(tour, rand() % instance->points);
+                if (iteration <= 0) {
+                    break;
+                }
+            } else {
+                iteration = 800;
             }
         }
         double distance = instance->tourDistance(tour);

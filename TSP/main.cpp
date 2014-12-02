@@ -202,7 +202,18 @@ public:
                         continue;
                     }
                     
-                    
+                    auto p = j;
+                    bool isCyclic = false;
+                    while (prev[p] != -1) {
+                        if (p == n) {
+                            isCyclic = true;
+                            break;
+                        }
+                        p = prev[p];
+                    }
+                    if (isCyclic && i != tour.size()-1) {
+                        continue;
+                    }
                     auto distance = dist(j, n);
                     if (distance < bestValue) {
                         best = j;
@@ -219,16 +230,9 @@ public:
             prev[neighbor] = best;
         }
         
-        for (int i = 0; i < tour.size(); i++) {
-            tour[i] = next[i];
-        }
         
         
-//        printVector(next);
-//        printVector(tour);
-//
-        
-        return tour;
+        return next;
     }
     
     double tourDistance(const vector<int> &tour) {
@@ -405,7 +409,7 @@ public:
         double distanceThreshold = 0.1;
         while (didImprove) {
             didImprove = false;
-            for (int i = 0; i < tour.size(); i++) {
+            for (int i = 0; i < tour.size()-1; i++) {
                 if (timeIsRunningOut()) {
                     cerr << "Time out" << endl;
                     return;
@@ -609,7 +613,7 @@ public:
 
 int main(int argc, char **argv) {
 #ifdef DEBUG
-    auto instance = TravelingSalesmanProblem::createRandom(50);
+    auto instance = TravelingSalesmanProblem::createRandom(20);
 #else
     auto instance = TravelingSalesmanProblem::createFromStdin();
 #endif

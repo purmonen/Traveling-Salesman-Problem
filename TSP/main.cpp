@@ -4,12 +4,17 @@
 #include <math.h>
 #include <assert.h>
 #include <chrono>
+#include <fstream>
 
 using namespace std;
 auto startTime = chrono::high_resolution_clock::now();
 
 inline bool timeIsRunningOut() {
-    return startTime + chrono::milliseconds(15000) < chrono::high_resolution_clock::now();
+#ifdef DEBUG
+    return false;
+#else
+    return startTime + chrono::milliseconds(1500) < chrono::high_resolution_clock::now();
+#endif
 }
 
 template <typename T>
@@ -28,15 +33,26 @@ public:
     double **distance;
     int **neighbors;
     
-    static TravelingSalesmanProblem *createFromStdin(){
+    template <class T>
+    static TravelingSalesmanProblem *createFromStream(T &cin){
         TravelingSalesmanProblem *instance = new TravelingSalesmanProblem();;
         cin >> instance->points;
         instance->y = new double[instance->points];
         instance->x = new double[instance->points];
-        for (auto i = 0; i < instance->points; i++)
+        for (auto i = 0; i < instance->points; i++) {
             cin >> instance->x[i] >> instance->y[i];
+        }
         initInstance(instance);
         return instance;
+    }
+    
+    static TravelingSalesmanProblem *createFromStdin(){
+        return createFromStream(cin);
+    }
+    
+    static TravelingSalesmanProblem *createFromFile() {
+        fstream file("tsp.txt");
+        return createFromStream(file);
     }
     
     static void initInstance(TravelingSalesmanProblem *instance) {
@@ -309,9 +325,9 @@ public:
                             double afterDistance2 = dist(tour[i], tour[j]) + dist(tour[i+1], tour[k]) + dist(tour[j+1], tour[nextK]);
                             if (afterDistance2 < prevDistance2) {
                                 reverse(&tour[i]+1, &tour[j]+1);
-                                reverse(&tour[j]+1, &tour[k+1]+1);
+                                reverse(&tour[j]+1, &tour[k]+1);
                                 vector<int> reverseTour(tour.size(), 0);
-                                for (auto x = 0; x < tour.size(); x++) {
+                                for (auto x = i+1; x < k+1; x++) {
                                     reverseTour[tour[x]] = x;
                                 }
                                 didImprove = true;
@@ -326,47 +342,53 @@ public:
 
 
 int main(int argc, char **argv) {
-#ifdef DEBUG2
-    auto instance = TravelingSalesmanProblem::testInstance();
+#ifdef DEBUG
+    auto instance = TravelingSalesmanProblem::createFromFile();
 #else
     auto instance = TravelingSalesmanProblem::createFromStdin();
 #endif
     auto greedyTour = instance->greedy();
+    instance->kopt3(greedyTour);
     vector<int> greedyReverseTour(greedyTour.size());
-    instance->kopt3neighbors(greedyTour);
     for (int i = 0; i < greedyTour.size(); i++) {
         greedyReverseTour[greedyTour[i]] = i;
     }
     vector<int> minimumTour = greedyTour;
     double minimumDistance = instance->tourDistance(greedyTour);
 //    while (!timeIsRunningOut()) {
-//                instance->kopt2neighbors(tour);
-//        auto tour = greedyTour;
-//        auto reverseTour = greedyReverseTour;
-//        int iteration = 800;
-//        while(!timeIsRunningOut()) {
-//            iteration--;
-//            if (!instance->kopt2(tour, rand() % instance->points)) {
-//                if (iteration <= 0) {
-//                    break;
-//                }
-//            } else {
-//                iteration = 800;
-//            }
-//        }
-//        double distance = instance->tourDistance(tour);
-//        if (distance < minimumDistance) {
-//            minimumDistance = distance;
-//            minimumTour = tour;
-//        }
+//        instance->kopt2(minimumTour);
+//        instance->kopt3(minimumTour);
+////                instance->kopt2neighbors(tour);
+////        auto tour = greedyTour;
+////        auto reverseTour = greedyReverseTour;
+////        int iteration = 800;
+////        while(!timeIsRunningOut()) {
+////            iteration--;
+////            if (!instance->kopt2(tour, rand() % instance->points)) {
+////                if (iteration <= 0) {
+////                    break;
+////                }
+////            } else {
+////                iteration = 800;
+////            }
+////        }
+////        double distance = instance->tourDistance(tour);
+////        if (distance < minimumDistance) {
+////            minimumDistance = distance;
+////            minimumTour = tour;
+////        }
 //        //        random_shuffle(tour.begin(), tour.end());
 //    }
     
-    cerr << instance->tourDistance(minimumTour) << endl;
+
     for (auto i: minimumTour) {
         cout << i << endl;
     }
+    cerr << "Tour length: " << instance->tourDistance(minimumTour) << endl;
     
+    auto endTime = chrono::high_resolution_clock::now();
+    auto duration = (endTime - startTime);
+    cerr << "Time: " << duration.count() / 1e6 << endl;
     delete instance;
     return 0;
 }

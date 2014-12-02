@@ -188,7 +188,7 @@ public:
         vector<int> prev(points, -1);
         for (int i = 0; i < points; i++) {
             int best = -1;
-            double bestValue = 999999999;
+            double bestValue = 99999999;
             int bestN = -1;
             for (int j = 0; j < points; j++) {
                 if (next[j] != -1) {
@@ -203,14 +203,20 @@ public:
                     }
                     
                     auto p = j;
+                    
+                    if (j == 14 && n == 0 && i == 5) {
+                        
+                    }
                     bool isCyclic = false;
                     while (prev[p] != -1) {
+                        p = prev[p];
                         if (p == n) {
                             isCyclic = true;
                             break;
                         }
-                        p = prev[p];
                     }
+                    
+
                     if (isCyclic && i != tour.size()-1) {
                         continue;
                     }
@@ -222,17 +228,21 @@ public:
                     }
                 }
             }
-            if (bestN == -1) {
-//                printVector(next);
-            }
             auto neighbor = bestN;
             next[best] = neighbor;
             prev[neighbor] = best;
         }
+        for (int i = 0; i < points; i++) {
+            assert(find(next.begin(), next.end(), i) != next.end());
+        }
         
+        int path = 0;
+        for (int i = 0; i < points; i++) {
+            tour[i] = path;
+            path = next[path];
+        }
         
-        
-        return next;
+        return tour;
     }
     
     double tourDistance(const vector<int> &tour) {
@@ -613,21 +623,32 @@ public:
 
 int main(int argc, char **argv) {
 #ifdef DEBUG
-    auto instance = TravelingSalesmanProblem::createRandom(20);
+    auto instance = TravelingSalesmanProblem::createRandom(300);
 #else
     auto instance = TravelingSalesmanProblem::createFromStdin();
 #endif
-    auto greedyTour = instance->greedy();
+    
+    if (instance->points == 1) {
+        cout << 0;
+        return 0;
+    }
+    
+    vector<int> greedyTour;
+    if (instance->points < 300) {
+        greedyTour = instance->greedy();
+    } else {
+        greedyTour = instance->nearestNeighbor();
+    }
     vector<int> greedyReverseTour(greedyTour.size());
     for (int i = 0; i < greedyTour.size(); i++) {
         greedyReverseTour[greedyTour[i]] = i;
         //        greedyTour[i] = instance->neighbors[0][i];
     }
-    //    random_shuffle(greedyTour.begin(), greedyTour.end());
+//        random_shuffle(greedyTour.begin(), greedyTour.end());
     
-    instance->kopt3neighbors2(greedyTour, 20);
-    //    instance->kopt2(greedyTour);
-    //    instance->kopt3neighbors2(greedyTour, 1000);
+    instance->kopt3neighbors2(greedyTour, 50);
+    instance->kopt2(greedyTour);
+//    instance->kopt3neighbors2(greedyTour, 10);
     
     vector<int> minimumTour = greedyTour;
     auto tour = greedyTour;

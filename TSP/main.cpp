@@ -17,7 +17,7 @@ inline bool timeIsRunningOut() {
 #ifdef DEBUG
     return false;
 #else
-    return startTime + chrono::milliseconds(1500) < chrono::high_resolution_clock::now();
+    return startTime + chrono::milliseconds(1900) < chrono::high_resolution_clock::now();
 #endif
 }
 
@@ -194,7 +194,8 @@ public:
                 if (next[j] != -1) {
                     continue;
                 }
-                for (int n = 0; n < points; n++) {
+                for (int n2 = 1; n2 < points; n2++) {
+                    auto n = neighbors[j][n2];
                     if (n == j) {
                         continue;
                     }
@@ -204,9 +205,6 @@ public:
                     
                     auto p = j;
                     
-                    if (j == 14 && n == 0 && i == 5) {
-                        
-                    }
                     bool isCyclic = false;
                     while (prev[p] != -1) {
                         p = prev[p];
@@ -216,12 +214,74 @@ public:
                         }
                     }
                     
-
+                    
                     if (isCyclic && i != tour.size()-1) {
                         continue;
                     }
                     auto distance = dist(j, n);
                     if (distance < bestValue) {
+                        best = j;
+                        bestValue = distance;
+                        bestN = n;
+                    }
+                    break;
+                }
+            }
+            auto neighbor = bestN;
+            next[best] = neighbor;
+            prev[neighbor] = best;
+        }
+        for (int i = 0; i < points; i++) {
+            assert(find(next.begin(), next.end(), i) != next.end());
+        }
+        
+        int path = 0;
+        for (int i = 0; i < points; i++) {
+            tour[i] = path;
+            path = next[path];
+        }
+        
+        return tour;
+    }
+    
+    vector<int> clarkeWright() {
+        vector<int> tour(points, 0);
+        vector<int> next(points, -1);
+        vector<int> prev(points, -1);
+        
+        int hub = rand() % tour.size();
+        
+        for (int i = 0; i < points; i++) {
+            int best = -1;
+            double bestValue = -1;
+            int bestN = -1;
+            for (int j = 0; j < points; j++) {
+                if (next[j] != -1) {
+                    continue;
+                }
+                for (int n2 = 1; n2 < points; n2++) {
+                    auto n = neighbors[j][n2];
+                    if (n == j) {
+                        continue;
+                    }
+                    if (prev[n] != -1) {
+                        continue;
+                    }
+                    auto p = j;
+                    bool isCyclic = false;
+                    while (prev[p] != -1) {
+                        p = prev[p];
+                        if (p == n) {
+                            isCyclic = true;
+                            break;
+                        }
+                    }
+                    
+                    if (isCyclic && i != tour.size()-1) {
+                        continue;
+                    }
+                    auto distance = (dist(hub, n) + dist(hub, j)) - (dist(j, n));
+                    if (distance > bestValue) {
                         best = j;
                         bestValue = distance;
                         bestN = n;
@@ -244,6 +304,7 @@ public:
         
         return tour;
     }
+    
     
     double tourDistance(const vector<int> &tour) {
         double distance = 0;
@@ -303,18 +364,17 @@ public:
                     cerr << "Time out" << endl;
                     return;
                 }
-                for (int n = 1; n < min(20, points); n++) {
-                    int jValue = neighbors[tour[i]][n];
-                    int j = reverseTour[jValue];
+                for (int n = 1; n < min(1000, points); n++) {
+                    int j = reverseTour[neighbors[tour[i]][n]];
+                    //                    if (dist(tour[i], tour[j]) > dist(tour[i], tour[i+1]) + 10) {
+                    //                        break;
+                    //                    }
                     if (j >= i+2) {
                         int nextJ = j+1 < tour.size() ? j+1 : 0;
-                        //                        if (tour[i]+tour[i+1] < tour[i] + tour[j]) {
-                        //                            break;
-                        //                        }
                         double prevDistance2 = dist(tour[i], tour[i+1]) + dist(tour[j], tour[nextJ]);
                         double afterDistance2 = dist(tour[i], tour[j]) + dist(tour[i+1], tour[nextJ]);
-                        if (afterDistance2 < prevDistance2) {
-                            reverse(&tour[i+1], &tour[j]+1);
+                        if (afterDistance2 + 0.1 < prevDistance2) {
+                            reverse(&tour[i]+1, &tour[j]+1);
                             for (auto k = i+1; k < j+1; k++) {
                                 reverseTour[tour[k]] = k;
                             }
@@ -331,9 +391,55 @@ public:
         return;
     }
     
+    void kopt2neighborsopt(vector<int> &tour) {
+        vector<int> reverseTour(tour.size(), 0);
+        for (auto i = 0; i < tour.size(); i++) {
+            reverseTour[tour[i]] = i;
+        }
+        while (true) {
+            bool didSwap = false;
+            for (int i = 0; i < tour.size(); i++) {
+                if (timeIsRunningOut()) {
+                    cerr << "Time out" << endl;
+                    return;
+                }
+                for (int n = 1; n < min(1000, points); n++) {
+                    int j = reverseTour[neighbors[tour[i]][n]];
+                    //                    if (dist(tour[i], tour[j]) > dist(tour[i], tour[i+1]) + 10) {
+                    //                        break;
+                    //                    }
+                    if (dist(tour[i], tour[i + 1]) < dist(tour[i], tour[j]))  break;
+                    if (j >= i + 2 || j <= i - 2) {
+                        int nextJ = j+1 < tour.size() ? j+1 : 0;
+                        double prevDistance2 = dist(tour[i], tour[i+1]) + dist(tour[j], tour[nextJ]);
+                        double afterDistance2 = dist(tour[i], tour[j]) + dist(tour[i+1], tour[nextJ]);
+                        if (afterDistance2 + 0.1 < prevDistance2) {
+                            int i2 = i;
+                            int j2 = j;
+                            if (i2 > j2)
+                                swap(i2, j2);
+                            
+                            reverse(&tour[i2] + 1, &tour[j2] + 1);
+                            for (auto k = i2 + 1; k < j2 + 1; k++) {
+                                reverseTour[tour[k]] = k;
+                            }
+                            didSwap = true;
+                        }
+                    }
+                }
+                
+            }
+            if (!didSwap) {
+                break;
+            }
+        }
+        return;
+    }
+    
+    
     bool kopt2neighbors(vector<int> &tour, vector<int> &reverseTour, const int i) {
         bool didImprove = false;
-        for (int n = 1; n < min(30, points); n++) {
+        for (int n = 1; n < min(10, points); n++) {
             int jValue = neighbors[tour[i]][n];
             int j = reverseTour[jValue];
             if (j >= i+2) {
@@ -356,28 +462,76 @@ public:
     }
     
     
-    vector<int> kopt3(vector<int> &tour) {
-        while (true) {
-            bool didSwap = false;
-            for (int i = 0; i < tour.size(); i++) {
-                for (int j = i+2; j < tour.size(); j++) {
-                    for (int k = j+2; k < tour.size(); k++) {
-                        if (timeIsRunningOut()) {
-                            cerr << "Time out" << endl;
-                            return tour;
+    void kopt3neighbors3(vector<int> &tour, int neighborLimit) {
+        vector<int> reverseTour(tour.size(), 0);
+        for (auto x = 0; x < tour.size(); x++) {
+            reverseTour[tour[x]] = x;
+        }
+        
+        bool didImprove = true;
+        double distanceThreshold = 0.1;
+        while (didImprove) {
+            didImprove = false;
+            for (int i = 0; i < tour.size()-1; i++) {
+                if (timeIsRunningOut()) {
+                    cerr << "Time out" << endl;
+                    return;
+                }
+                // First move
+                for (int iNeighbor = 1; iNeighbor < min(neighborLimit, (int)tour.size()); iNeighbor++) {
+                    int j = reverseTour[neighbors[tour[i]][iNeighbor]];
+                    for (int jNeighbor = 1; jNeighbor < min(neighborLimit, (int)tour.size()); jNeighbor++) {
+                        if (j <= i) {
+                            break;
                         }
-                        int nextK = k+1 < tour.size() ? k+1 : 0;
-                        double prevDistance2 = dist(tour[i], tour[i+1]) + dist(tour[j], tour[j+1]) + dist(tour[k], tour[nextK]);
-                        double afterDistance2 = dist(tour[i], tour[j]) + dist(tour[i+1], tour[k]) + dist(tour[j+1], tour[nextK]);
-                        if (afterDistance2 < prevDistance2) {
-                            reverse(&tour[i]+1, &tour[j]+1);
-                            reverse(&tour[j]+1, &tour[k]+1);
-                            didSwap = true;
-                        } else {
+                        int k = reverseTour[neighbors[tour[i+1]][jNeighbor]];
+                        if (j < k) {
+                            assert(i < j && j < k);
+                            assert(i >= 0);
+                            assert(k < tour.size());
+                            if (timeIsRunningOut()) {
+                                cerr << "Time out" << endl;
+                                return;
+                            }
+                            int nextK = k+1 < tour.size() ? k+1 : 0;
+                            double prevDistance2 = dist(tour[i], tour[i+1]) + dist(tour[j], tour[j+1]) + dist(tour[k], tour[nextK]);
+                            double afterDistance2 = dist(tour[i], tour[j]) + dist(tour[i+1], tour[k]) + dist(tour[j+1], tour[nextK]);
+                            if (afterDistance2 + distanceThreshold < prevDistance2) {
+                                auto bef = tourDistance(tour);
+                                reverse(&tour[i]+1, &tour[j]+1);
+                                reverse(&tour[j]+1, &tour[k]+1);
+                                auto af = tourDistance(tour);
+                                assert(bef > af);
+                                didImprove = true;
+                                for (auto x = 0; x < tour.size(); x++) {
+                                    reverseTour[tour[x]] = x;
+                                }
+                            }
+                        }
+                    }
+                    if (timeIsRunningOut()) {
+                        cerr << "Time out" << endl;
+                        return;
+                    }
+                    
+                    // Second move
+                    j = reverseTour[neighbors[tour[i]][iNeighbor]] - 1;
+                    for (int jNeighbor = 1; jNeighbor < min(neighborLimit, (int)tour.size()); jNeighbor++) {
+                        if (j <= i) {
+                            break;
+                        }
+                        int k = reverseTour[neighbors[tour[j]][jNeighbor]] - 1;
+                        if (k == -1) {
+                            k = (int)tour.size()-1;
+                        }
+                        if (j < k) {
+                            assert(i < j && j < k);
+                            int nextK = k+1 < tour.size() ? k+1 : 0;
+                            double prevDistance2 = dist(tour[i], tour[i+1]) + dist(tour[j], tour[j+1]) + dist(tour[k], tour[nextK]);
                             double afterDistance2 = dist(tour[i], tour[j+1]) + dist(tour[j], tour[nextK]) + dist(tour[k], tour[i+1]);
-                            if (afterDistance2 < prevDistance2) {
-                                vector<int> tmp(tour.size());
-                                
+                            if (afterDistance2 + distanceThreshold < prevDistance2) {
+                                auto bef = tourDistance(tour);
+                                vector<int> tmp(tour.size(), -1);
                                 int index = 0;
                                 for (int x = 0; x <= i; x++) {
                                     tmp[x] = tour[x];
@@ -395,18 +549,120 @@ public:
                                     tmp[index] = tour[x];
                                     index++;
                                 }
-                                didSwap = true;
+                                
+                                tour = tmp;
+                                didImprove = true;
+                                auto af = tourDistance(tour);
+                                //                                assert(bef > af);
+                                for (auto x = 0; x < tour.size(); x++) {
+                                    reverseTour[tour[x]] = x;
+                                }
+                            }
+                        }
+                    }
+                    if (timeIsRunningOut()) {
+                        cerr << "Time out" << endl;
+                        return;
+                    }
+                    
+                    
+                    // Third move
+                    j = reverseTour[neighbors[tour[i+1]][iNeighbor]] - 1;
+                    for (int jNeighbor = 1; jNeighbor < min(neighborLimit, (int)tour.size()); jNeighbor++) {
+                        if (j <= i) {
+                            break;
+                        }
+                        int k = reverseTour[neighbors[tour[i]][jNeighbor]];
+                        if (k == -1) {
+                            k = (int)tour.size()-1;
+                        }
+                        if (j < k) {
+                            assert(i < j && j < k);
+                            int nextK = k+1 < tour.size() ? k+1 : 0;
+                            double prevDistance2 = dist(tour[i], tour[i+1]) + dist(tour[j], tour[j+1]) + dist(tour[k], tour[nextK]);
+                            double afterDistance2 = dist(tour[i], tour[k]) + dist(tour[j+1], tour[i+1]) + dist(tour[j], tour[nextK]);
+                            if (afterDistance2 + distanceThreshold< prevDistance2) {
+                                auto bef = tourDistance(tour);
+                                vector<int> tmp(tour.size());
+                                int index = 0;
+                                for (int x = 0; x <= i; x++) {
+                                    tmp[x] = tour[x];
+                                    index++;
+                                }
+                                for (int x = k; x >= j+1; x--) {
+                                    tmp[index] = tour[x];
+                                    index++;
+                                }
+                                for (int x = i+1; x <= j; x++) {
+                                    tmp[index] = tour[x];
+                                    index++;
+                                }
+                                for (int x = k+1; x < tour.size(); x++) {
+                                    tmp[index] = tour[x];
+                                    index++;
+                                }
+                                tour = tmp;
+                                assert(bef > tourDistance(tour));
+                                didImprove = true;
+                                for (auto x = 0; x < tour.size(); x++) {
+                                    reverseTour[tour[x]] = x;
+                                }
+                            }
+                        }
+                        if (timeIsRunningOut()) {
+                            cerr << "Time out" << endl;
+                            return;
+                        }
+                        
+                        
+                        // Fourth move
+                        j = reverseTour[neighbors[tour[i]][iNeighbor]] - 1;
+                        for (int jNeighbor = 1; jNeighbor < min(neighborLimit, (int)tour.size()); jNeighbor++) {
+                            if (j <= i) {
+                                break;
+                            }
+                            int k = reverseTour[neighbors[tour[j]][jNeighbor]];
+                            if (k == -1) {
+                                k = (int)tour.size()-1;
+                            }
+                            if (j < k) {
+                                assert(i < j && j < k);
+                                int nextK = k+1 < tour.size() ? k+1 : 0;
+                                double prevDistance2 = dist(tour[i], tour[i+1]) + dist(tour[j], tour[j+1]) + dist(tour[k], tour[nextK]);
+                                double afterDistance2 = dist(tour[i], tour[j+1]) + dist(tour[k], tour[j]) + dist(tour[i+1], tour[nextK]);
+                                if (afterDistance2 + distanceThreshold < prevDistance2) {
+                                    auto bef = tourDistance(tour);
+                                    vector<int> tmp(tour.size());
+                                    int index = 0;
+                                    for (int x = 0; x <= i; x++) {
+                                        tmp[x] = tour[x];
+                                        index++;
+                                    }
+                                    for (int x = j+1; x <= k; x++) {
+                                        tmp[index] = tour[x];
+                                        index++;
+                                    }
+                                    for (int x = j; x >= i+1; x--) {
+                                        tmp[index] = tour[x];
+                                        index++;
+                                    }
+                                    for (int x = k+1; x < tour.size(); x++) {
+                                        tmp[index] = tour[x];
+                                        index++;
+                                    }
+                                    tour = tmp;
+                                    assert(bef > tourDistance(tour));
+                                    didImprove = true;
+                                    for (auto x = 0; x < tour.size(); x++) {
+                                        reverseTour[tour[x]] = x;
+                                    }
+                                }
                             }
                         }
                     }
                 }
-                
-            }
-            if (!didSwap) {
-                break;
             }
         }
-        return tour;
     }
     
     void kopt3neighbors2(vector<int> &tour, int neighborLimit) {
@@ -566,7 +822,6 @@ public:
                         return;
                     }
                     
-                    
                     // Fourth move
                     for (int iNeighbor = 1; iNeighbor < min(neighborLimit, (int)tour.size()); iNeighbor++) {
                         int j = reverseTour[neighbors[tour[i]][iNeighbor]] - 1;
@@ -617,13 +872,74 @@ public:
             }
         }
     }
+    
+    void kopt3neighbors2opt(vector<int> &tour, int neighborLimit) {
+        vector<int> reverseTour(tour.size(), 0);
+        for (auto x = 0; x < tour.size(); x++) {
+            reverseTour[tour[x]] = x;
+        }
+        
+        bool didImprove = true;
+        double distanceThreshold = 0.1;
+        while (didImprove) {
+            didImprove = false;
+            for (int i = 0; i < tour.size()-1; i++) {
+                if (timeIsRunningOut()) {
+                    cerr << "Time out" << endl;
+                    return;
+                }
+                // First move
+                for (int iNeighbor = 1; iNeighbor < min(neighborLimit, (int)tour.size()); iNeighbor++) {
+                    int j = reverseTour[neighbors[tour[i]][iNeighbor]];
+                    if (dist(tour[i], tour[i + 1]) < dist(tour[i], tour[j])) break;
+                    if (j >= i + 2 || j <= i - 2) {
+                        for (int jNeighbor = 1; jNeighbor < min(neighborLimit, (int)tour.size()); jNeighbor++) {
+                            int k = reverseTour[neighbors[tour[i+1]][jNeighbor]];
+                            if (j < k && i < k) {
+//                                assert(i < j && j < k);
+//                                assert(i >= 0);
+                                assert(k < tour.size());
+                                if (timeIsRunningOut()) {
+                                    cerr << "Time out" << endl;
+                                    return;
+                                }
+                                int nextK = k+1 < tour.size() ? k+1 : 0;
+                                int i2 = i;
+                                int j2 = j;
+                                if (i2 > j2)
+                                    swap(i2, j2);
+                                double prevDistance2 = dist(tour[i2], tour[i2+1]) + dist(tour[j2], tour[j2+1]) + dist(tour[k], tour[nextK]);
+                                double afterDistance2 = dist(tour[i2], tour[j2]) + dist(tour[i2+1], tour[k]) + dist(tour[j2+1], tour[nextK]);
+                                if (afterDistance2 + distanceThreshold < prevDistance2) {
+                                    auto bef = tourDistance(tour);
+                                    reverse(&tour[i2]+1, &tour[j2]+1);
+                                    reverse(&tour[j2]+1, &tour[k]+1);
+                                    auto af = tourDistance(tour);
+                                    assert(bef > af);
+                                    didImprove = true;
+                                    for (auto x = 0; x < tour.size(); x++) {
+                                        reverseTour[tour[x]] = x;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if (timeIsRunningOut()) {
+                    cerr << "Time out" << endl;
+                    return;
+                }
+            }
+        }
+    }
+    
 };
 
 
 
 int main(int argc, char **argv) {
 #ifdef DEBUG
-    auto instance = TravelingSalesmanProblem::createRandom(300);
+    auto instance = TravelingSalesmanProblem::createRandom(1000);
 #else
     auto instance = TravelingSalesmanProblem::createFromStdin();
 #endif
@@ -634,21 +950,26 @@ int main(int argc, char **argv) {
     }
     
     vector<int> greedyTour;
-    if (instance->points < 300) {
+    if (instance->points < 1000) {
         greedyTour = instance->greedy();
     } else {
         greedyTour = instance->nearestNeighbor();
     }
+    
+    instance->kopt3neighbors2opt(greedyTour, 50);
+    //    instance->kopt2(greedyTour);
     vector<int> greedyReverseTour(greedyTour.size());
     for (int i = 0; i < greedyTour.size(); i++) {
         greedyReverseTour[greedyTour[i]] = i;
         //        greedyTour[i] = instance->neighbors[0][i];
     }
-//        random_shuffle(greedyTour.begin(), greedyTour.end());
+    auto reverseTour = greedyReverseTour;
     
-    instance->kopt3neighbors2(greedyTour, 50);
-    instance->kopt2(greedyTour);
-//    instance->kopt3neighbors2(greedyTour, 10);
+    //        random_shuffle(greedyTour.begin(), greedyTour.end());
+    
+    //    instance->kopt3neighbors2(greedyTour, 50);
+    //    instance->kopt2(greedyTour);
+    //    instance->kopt3neighbors2(greedyTour, 1000);
     
     vector<int> minimumTour = greedyTour;
     auto tour = greedyTour;
@@ -656,16 +977,17 @@ int main(int argc, char **argv) {
     int iterations = 0;
     //    while (!timeIsRunningOut()) {
     //        iterations++;
-    //        if (iterations > 2000) {
+    //        if (iterations > 300000) {
     //            break;
     //        }
-    //        instance->kopt3neighbors2(tour);
+    //        instance->kopt2neighbors(tour, reverseTour, rand() % tour.size());
+    //
     //        double distance = instance->tourDistance(tour);
     //        if (distance < minimumDistance) {
     //            minimumDistance = distance;
     //            minimumTour = tour;
     //        }
-    //        random_shuffle(tour.begin(), tour.end());
+    //        //        random_shuffle(tour.begin(), tour.end());
     //    }
     
     

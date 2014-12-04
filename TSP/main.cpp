@@ -17,7 +17,7 @@ inline bool timeIsRunningOut() {
 #ifdef DEBUG
     return false;
 #else
-    return startTime + chrono::milliseconds(1900) < chrono::high_resolution_clock::now();
+    return startTime + chrono::milliseconds(1800) < chrono::high_resolution_clock::now();
 #endif
 }
 
@@ -163,8 +163,9 @@ public:
         for (int i = 0; i < points; i++) {
             used[i] = false;
         }
-        tour[0] = 0;
-        used[0] = true;
+        int start = rand() % points;
+        tour[0] = start;
+        used[start] = true;
         for (int i = 1; i < points; i++) {
             int best = -1;
             for (int j = 0; j < points; j++) {
@@ -403,7 +404,7 @@ public:
                     cerr << "Time out" << endl;
                     return;
                 }
-                for (int n = 1; n < min(1000, points); n++) {
+                for (int n = 1; n < min(50, points); n++) {
                     int j = reverseTour[neighbors[tour[i]][n]];
                     if (dist(tour[i], tour[i + 1]) < dist(tour[i], tour[j]))  break;
                     if (j >= i + 2 || j <= i - 2) {
@@ -1084,60 +1085,100 @@ public:
 
 
 
+//int main(int argc, char **argv) {
+//#ifdef DEBUG
+//    auto instance = TravelingSalesmanProblem::createRandom(999);
+//#else
+//    auto instance = TravelingSalesmanProblem::createFromStdin();
+//#endif
+//
+//    if (instance->points == 1) {
+//        cout << 0;
+//        return 0;
+//    }
+//
+//    vector<int> greedyTour;
+//    if (instance->points < 1000 && false) {
+//        greedyTour = instance->greedy();
+//    } else {
+//        greedyTour = instance->nearestNeighbor();
+//    }
+//
+//    instance->kopt3neighbors2opt(greedyTour, 50);
+//    instance->kopt2neighborsopt(greedyTour);
+//
+//    //    instance->kopt2(greedyTour);
+//    vector<int> greedyReverseTour(greedyTour.size());
+//    for (int i = 0; i < greedyTour.size(); i++) {
+//        greedyReverseTour[greedyTour[i]] = i;
+//        //        greedyTour[i] = instance->neighbors[0][i];
+//    }
+//    auto reverseTour = greedyReverseTour;
+//
+//    //        random_shuffle(greedyTour.begin(), greedyTour.end());
+//
+//    //    instance->kopt3neighbors2(greedyTour, 50);
+//    //    instance->kopt2(greedyTour);
+//    //    instance->kopt3neighbors2(greedyTour, 1000);
+//
+//    vector<int> minimumTour = greedyTour;
+//    auto tour = greedyTour;
+//    double minimumDistance = instance->tourDistance(greedyTour);
+//    int iterations = 0;
+//    //    while (!timeIsRunningOut()) {
+//    //        iterations++;
+//    //        if (iterations > 300000) {
+//    //            break;
+//    //        }
+//    //        instance->kopt2neighbors(tour, reverseTour, rand() % tour.size());
+//    //
+//    //        double distance = instance->tourDistance(tour);
+//    //        if (distance < minimumDistance) {
+//    //            minimumDistance = distance;
+//    //            minimumTour = tour;
+//    //        }
+//    //        //        random_shuffle(tour.begin(), tour.end());
+//    //    }
+//
+//
+//    for (auto i: minimumTour) {
+//        cout << i << endl;
+//    }
+//    cerr << "Tour length: " << instance->tourDistance(minimumTour) << endl;
+//    auto endTime = chrono::high_resolution_clock::now();
+//    auto duration = (endTime - startTime);
+//    cerr << "Time: " << duration.count() / 1e9 << endl;
+//    delete instance;
+//    return 0;
+//}
+
 int main(int argc, char **argv) {
 #ifdef DEBUG
     auto instance = TravelingSalesmanProblem::createRandom(999);
 #else
     auto instance = TravelingSalesmanProblem::createFromStdin();
 #endif
-    
     if (instance->points == 1) {
         cout << 0;
         return 0;
     }
-    
-    vector<int> greedyTour;
-    if (instance->points < 1000) {
-        greedyTour = instance->greedy();
-    } else {
-        greedyTour = instance->nearestNeighbor();
-    }
-    
-    instance->kopt3neighbors2opt(greedyTour, 50);
-    instance->kopt2neighborsopt(greedyTour);
-    
-    //    instance->kopt2(greedyTour);
-    vector<int> greedyReverseTour(greedyTour.size());
-    for (int i = 0; i < greedyTour.size(); i++) {
-        greedyReverseTour[greedyTour[i]] = i;
-        //        greedyTour[i] = instance->neighbors[0][i];
-    }
-    auto reverseTour = greedyReverseTour;
-    
-    //        random_shuffle(greedyTour.begin(), greedyTour.end());
-    
-    //    instance->kopt3neighbors2(greedyTour, 50);
-    //    instance->kopt2(greedyTour);
-    //    instance->kopt3neighbors2(greedyTour, 1000);
-    
+    vector<int> greedyTour = instance->greedy();
     vector<int> minimumTour = greedyTour;
-    auto tour = greedyTour;
-    double minimumDistance = instance->tourDistance(greedyTour);
     int iterations = 0;
-    //    while (!timeIsRunningOut()) {
-    //        iterations++;
-    //        if (iterations > 300000) {
-    //            break;
-    //        }
-    //        instance->kopt2neighbors(tour, reverseTour, rand() % tour.size());
-    //
-    //        double distance = instance->tourDistance(tour);
-    //        if (distance < minimumDistance) {
-    //            minimumDistance = distance;
-    //            minimumTour = tour;
-    //        }
-    //        //        random_shuffle(tour.begin(), tour.end());
-    //    }
+    double minimumDistance = 99999999999;
+
+    while (!timeIsRunningOut()) {
+        instance->kopt3neighbors2opt(greedyTour, 30);
+        instance->kopt2neighborsopt(greedyTour);
+        double distance = instance->tourDistance(greedyTour);
+        if (distance < minimumDistance) {
+            minimumDistance = distance;
+            minimumTour = greedyTour;
+        }
+        greedyTour = instance->nearestNeighbor();
+
+        //        random_shuffle(tour.begin(), tour.end());
+    }
     
     
     for (auto i: minimumTour) {

@@ -1275,12 +1275,13 @@ public:
         int lastSplitIndex = -1;
         for (auto splitIndex: splitIndexes) {
             vector<int> subtour(tour.begin() + (lastSplitIndex+1), tour.begin() + splitIndex + 1);
-            lastSplitIndex = splitIndex;
+
             if (subtour.size() > 0) {
                 subtours.push_back(subtour);
                 inverseSubtours[lastSplitIndex+1] = (int)subtours.size() - 1;
                 inverseSubtours[splitIndex] = (int)subtours.size() - 1;
             }
+            lastSplitIndex = splitIndex;
         }
 
         // Construct tour
@@ -1293,7 +1294,9 @@ public:
             if (subtourIndex == -1) {
                 return result;
             }
-            if (subtours[subtourIndex][0] == connectIndex) {
+            
+            
+            if (find(tour.begin(), tour.end(), subtours[subtourIndex][0]) - tour.begin() == connectIndex) {
                 result.insert(result.end(), subtours[subtourIndex].begin(), subtours[subtourIndex].end());
             } else {
                 result.insert(result.end(), subtours[subtourIndex].rbegin(), subtours[subtourIndex].rend());
@@ -1322,19 +1325,24 @@ public:
             cout << "Iteration " << iterations << ":\t";
             printVector(t);
             if (i % 2 == 0) {
-                if (i > 4) {
+                if (i > 10) {
                     i--;
                     t[i]++;
                     continue;
                 }
                 
                 t[i]++;
+                
                 if (t[i] == tour.size()) {
                     t[i] = -1;
                     if (i == 0) {
                         break;
                     }
                     i--;
+                    continue;
+                }
+                
+                if (find(t.begin(), t.begin()+i, t[i]) != t.begin()+i) {
                     continue;
                 }
                 if (i >= 2) {
@@ -1355,6 +1363,9 @@ public:
                     i--;
                     continue;
                 }
+                if (find(t.begin(), t.begin()+i, t[i]) != t.begin()+i) {
+                    continue;
+                }
                 if (i >= 2) {
                     // Ended tour??
                     if (iterations == 239) {
@@ -1368,6 +1379,7 @@ public:
                     for (int j = 0; j < i; j++) {
                         gain += dist(tour[t[j]], tour[t[j+1]]) * (j % 2 == 0 ? 1 : -1);
                     }
+                    
                     gain -= dist(tour[t[i]], tour[t[0]]);
                     
                     // Check if better tour was constructed
@@ -1377,9 +1389,7 @@ public:
                         for (int j = 0; j <= i; j++) {
                             move.push_back(t[j]);
                         }
-                        
                         auto bef = tourDistance(tour);
-                        
                         auto potentialTour = linKernighanMove(move, tour);
                         bool isTour = true;
                         for (int i = 0; i < tour.size(); i++) {
@@ -1389,14 +1399,14 @@ public:
                         }
                         if (potentialTour.size() == tour.size() && isTour) {
                             cout << "DID MAKE A TOUR" << endl;
-                            printVector(t);
+                            printVector(move);
                             printVector(tour);
                             tour = potentialTour;
                             didImprove = true;
                         }
-                        
                         auto af = tourDistance(tour);
                         printVector(tour);
+                        cout << bef << ", " << af;
                         assert(bef >= af);
                     } else {
                         cout << "Did not gain from improvement" << endl;
@@ -1425,7 +1435,7 @@ int main(int argc, char **argv) {
     }
     vector<int> greedyTour = instance->greedy();
     instance->linKernighan3(greedyTour);
-    //            instance->kopt2neighborsopt(greedyTour);
+//                instance->kopt2neighborsopt(greedyTour);
     //
     vector<int> minimumTour = greedyTour;
     

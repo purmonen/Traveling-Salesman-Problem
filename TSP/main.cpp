@@ -1189,11 +1189,11 @@ public:
     
     
     vector<int> linKernighanMove(const vector<int> &move, const vector<int> &tour) {
-        cout << "Moves" << endl;
-        printVector(move);
-        
-        cout << "Tour" << endl;
-        printVector(tour);
+//        cout << "Moves" << endl;
+//        printVector(move);
+//        
+//        cout << "Tour" << endl;
+//        printVector(tour);
         vector<vector<int>> subtours;
         vector<int> inverseSubtours(tour.size(), -1);
         vector<int> splitIndexes;
@@ -1235,8 +1235,8 @@ public:
                 result.insert(result.end(), subtours[subtourIndex].rbegin(), subtours[subtourIndex].rend());
             }
         }
-        cout << "Result move" << endl;
-        printVector(result);
+//        cout << "Result move" << endl;
+//        printVector(result);
         
         return result;
     }
@@ -1251,13 +1251,12 @@ public:
         vector<int> t(size, -1);
         int i = 0;
         int iterations = 0;
+        int moves = 0;
+        int successfulMoves = 0;
         while (true) {
-            
             iterations++;
-//            cout << "Iteration " << iterations << ":\t";
-//            printVector(t);
             if (i % 2 == 0) {
-                if (i > 100) {
+                if (i > 20) {
                     i--;
                     t[i]++;
                     continue;
@@ -1279,8 +1278,6 @@ public:
                     int gain = dist(tour[t[i-1]], tour[t[i-2]]) - dist(tour[t[i]], tour[t[i-1]]);
                     if (t[i] == next(t[i-1]) || t[i] == prev(t[i-1]) || t[i] == t[i-1] || gain <= 0) {
                         continue;
-                    } else {
-                        cout << "Did find improvement" << endl;
                     }
                 }
             } else {
@@ -1299,7 +1296,6 @@ public:
                 if (i >= 2) {
                     // Ended tour??
                     if (t[i] == next(t[0]) || t[i] == prev(t[0]) || t[i] == t[0]) {
-                        cout << "Doesn't end tour" << endl;
                         continue;
                     }
                     int gain = 0;
@@ -1311,13 +1307,14 @@ public:
                     
                     // Check if better tour was constructed
                     if (gain > 0) {
-                        cout << "Did find improvement for entire tour " << i << endl;
+
                         vector<int> move;
                         for (int j = 0; j <= i; j++) {
                             move.push_back(t[j]);
                         }
                         auto bef = tourDistance(tour);
                         auto potentialTour = linKernighanMove(move, tour);
+                        moves++;
                         bool isTour = true;
                         for (int i = 0; i < tour.size(); i++) {
                             if (find(potentialTour.begin(), potentialTour.end(), i) == potentialTour.end()) {
@@ -1325,24 +1322,12 @@ public:
                             }
                         }
                         if (potentialTour.size() == tour.size() && isTour) {
-                            cout << "DID MAKE A TOUR" << endl;
-                            printVector(move);
-                            printVector(potentialTour);
-                            printVector(tour);
-
-                            if (tourDistance(potentialTour) < tourDistance(tour)) {
-                                tour = potentialTour;
-                            } else {
-                                cout << " ELA BAMA " << endl;
-                            }
+                            tour = potentialTour;
                             didImprove = true;
+                            successfulMoves++;
                         }
                         auto af = tourDistance(tour);
-                        printVector(tour);
-                        cout << bef << ", " << af;
-//                        assert(bef >= af);
-                    } else {
-                        cout << "Did not gain from improvement" << endl;
+                        assert(bef >= af);
                     }
                 }
             }
@@ -1351,14 +1336,20 @@ public:
                 i--;
             }
         }
+        
+    cout << "Number of moves " << moves << endl;
+    cout << "Number of successful moves " << successfulMoves << endl;
+
     }
+    
+
     
 };
 
 
 int main(int argc, char **argv) {
 #ifdef DEBUG
-    auto instance = TravelingSalesmanProblem::createRandom(20);
+    auto instance = TravelingSalesmanProblem::createRandom(50);
 #else
     auto instance = TravelingSalesmanProblem::createFromStdin();
 #endif
@@ -1367,8 +1358,10 @@ int main(int argc, char **argv) {
         return 0;
     }
     vector<int> greedyTour = instance->greedy();
-            instance->linKernighan(greedyTour);
+    instance->linKernighan(greedyTour);
+//    instance->kopt2(greedyTour);
     //
+//    instance->kopt3neighbors2opt(greedyTour, 50);
     vector<int> minimumTour = greedyTour;
     
     int iterations = 0;

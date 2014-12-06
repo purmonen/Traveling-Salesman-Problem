@@ -1450,11 +1450,11 @@ public:
                     tNeighbor[i]++;
                     int neighbor = this->neighbors[tour[t[i-1]]][tNeighbor[i]];
                     t[i] = (int)(find(tour.begin(), tour.end(), neighbor) - tour.begin());
-//                    if (tNeighbor[i] == 50) {
-//                        tNeighbor[i] = -1;
-//                        i--;
-//                        continue;
-//                    }
+                    if (tNeighbor[i] == tour.size()) {
+                        tNeighbor[i] = -1;
+                        i--;
+                        continue;
+                    }
                     if (t[i] == next(t[i - 1]) || t[i] == prev(t[i - 1]) || t[i] == t[i - 1]) {
                         continue;
                     } else if (dist(tour[t[i - 1]], tour[t[i - 2]]) - dist(tour[t[i]], tour[t[i - 1]]) - 0.00001 <= 0) {
@@ -1560,7 +1560,7 @@ int main(int argc, char **argv) {
     vector<int> linKernighanTour = instance->greedy();
     auto kopt2Tour = linKernighanTour;
     auto kopt3Tour = linKernighanTour;
-    if (instance->points < 10000) {
+    if (instance->points < 500) {
         instance->linKernighan2(linKernighanTour);
     }
 //    instance->kopt3neighbors2opt(linKernighanTour, 50);

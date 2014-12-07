@@ -18,7 +18,7 @@ inline bool timeIsRunningOut() {
 #ifdef DEBUG
     return startTime + chrono::milliseconds(100000) < chrono::high_resolution_clock::now();
 #else
-    return startTime + chrono::milliseconds(1800) < chrono::high_resolution_clock::now();
+    return startTime + chrono::milliseconds(1700) < chrono::high_resolution_clock::now();
 #endif
 }
 
@@ -126,7 +126,7 @@ public:
         instance->points = 10;
         instance->x = new double[instance->points];
         instance->y = new double[instance->points];
-        instance->x[0] = 95.0129;        //	95.0129 61.5432
+        instance->x[0] = 95.0129;        //    95.0129 61.5432
         instance->y[0] = 61.5432;
         instance->x[1] = 23.1139;		//	23.1139 79.1937
         instance->y[1] = 79.1937;
@@ -1087,241 +1087,10 @@ public:
     }
     
     
-    vector<int> dynamicExact() {
-        int n = points;
-        map<unsigned long, map<int, int>> parent;
-        map<unsigned long, map<int, double>> C;
-        for (int k = 0; k < n; k++) {
-            for (int j = 0; j < n; j++) {
-                unsigned long v = 0;
-                v |= 1 << j;
-                v |= 1 << k;
-                //printBits(v);
-                C[v][k] = dist(j, k);
-            }
-        }
-        for (int s = 3; s <= n; s++) {
-            // Stack 1,2,3
-            unsigned long S = 0;
-            for (int i = 0; i < s; i++) {
-                S |= 1 << i;
-            }
-            //            printBits(S);
-            
-            /* Bit rage */
-            int currentBit = 0;
-            while (true) {
-                //cout << "s = " << S << endl;
-                for (int k = 1; k < n; k++) {
-                    if ((S >> k) & 1) {
-                        double minimum = 1e300;
-                        for (int m = 1; m < n; m++) {
-                            if (m != k && ((1<<m) & S)) {
-                                // k = nuvarande slutplats
-                                // m = platsen innan nuvarande slutplats
-                                unsigned long tmpS = S ^ (1 << k);
-                                double distance = dist(m, k);
-                                //cout << "S = " << S << endl;
-                                //cout << "tmpS = " << tmpS << endl;
-                                //cout << "m = " << m << endl;
-                                //cout << "k = " << k << endl;
-                                //                                assert(C[tmpS][m] != 0);
-                                //8 4 1
-                                //1101 1
-                                //1111
-                                double tmpVal = C[tmpS][m] + distance;
-                                if (tmpVal < minimum) {
-                                    parent[S][k] = m;
-                                    C[S][k] = tmpVal;
-                                    minimum = tmpVal;
-                                }
-                            }
-                        }
-                    }
-                }
-                if (currentBit >= n - s) {
-                    break;
-                }
-                if (((S >> (currentBit + 1)) & 1) == 0) {
-                    S += (1 << currentBit);
-                    currentBit++;
-                }
-                else {
-                    int collidingOnes = 1;
-                    int i = 2;
-                    while ((S >> (currentBit + i)) & 1) {
-                        collidingOnes++;
-                        i++;
-                    }
-                    S += (1 << currentBit);
-                    for (int i = 0; i < collidingOnes; i++) {
-                        S |= 1 << i;
-                    }
-                    currentBit = 0;
-                }
-            }
-        }
-        
-        double opt = 9999999;
-        //        printBits((1 << ()n) - 1);
-        int node = 0;
-        unsigned long S = (1 << n) - 1;
-        for (int k = 1; k < n; k++) {
-            double tmp = C[S][k] + dist(k, 0);
-            opt = min(tmp, opt);
-            node = k;
-        }
-        
-        cout << "Opt: " << opt << endl;
-        vector<int> tour;
-        while (true) {
-            tour.push_back(node);
-            if (node == 0) {
-                break;
-            }
-            int oldNode = node;
-            node = parent[S][node];
-            S = S^(1 << oldNode);
-        }
-        return tour;
-    }
-    
-    
-    vector<int> linKernighanMove(const vector<int> &move, const vector<int> &tour) {
-        //        cout << "Moves" << endl;
-        //        printVector(move);
-        //
-        //        cout << "Tour" << endl;
-        //        printVector(tour);
-        vector<vector<int>> subtours;
-        vector<int> inverseSubtours(tour.size(), -1);
-        vector<int> splitIndexes;
-        vector<bool> isSubtourUsed;
-        splitIndexes.reserve(100);
-        
-        for (int i = 0; i < move.size(); i += 2) {
-            splitIndexes.push_back((move[i] + 1) % tour.size() == move[i + 1] ? move[i] : move[i + 1]);
-        }
-        if (splitIndexes[(int)splitIndexes.size() - 1] != tour.size() - 1) {
-            splitIndexes.push_back((int)tour.size() - 1);
-        }
-        sort(splitIndexes.begin(), splitIndexes.end());
-        
-        int lastSplitIndex = -1;
-        for (auto splitIndex : splitIndexes) {
-            vector<int> subtour(tour.begin() + (lastSplitIndex + 1), tour.begin() + splitIndex + 1);
-            
-            if (subtour.size() > 0) {
-                subtours.push_back(subtour);
-                isSubtourUsed.push_back(false);
-                inverseSubtours[lastSplitIndex + 1] = (int)subtours.size() - 1;
-                inverseSubtours[splitIndex] = (int)subtours.size() - 1;
-            }
-            lastSplitIndex = splitIndex;
-        }
-        
-        // Construct tour
-        vector<int> result = subtours[0];
-        isSubtourUsed[0] = true;
-        while (result.size() < tour.size()) {
-            auto index = find(tour.begin(), tour.end(), result[result.size() - 1]) - tour.begin();
-            auto moveIndex = find(move.begin(), move.end(), index) - move.begin();
-            if (moveIndex >= move.size()) return vector<int>();
-            auto connectIndex = move[(moveIndex + (moveIndex % 2 == 0 ? move.size() - 1 : 1)) % move.size()];
-            auto subtourIndex = inverseSubtours[connectIndex];
-            if (subtourIndex == -1) {
-                return vector<int>();
-            }
-            if (isSubtourUsed[subtourIndex]) return vector<int>();
-            isSubtourUsed[subtourIndex] = true;
-            if (find(tour.begin(), tour.end(), subtours[subtourIndex][0]) - tour.begin() == connectIndex) {
-                result.insert(result.end(), subtours[subtourIndex].begin(), subtours[subtourIndex].end());
-            }
-            else {
-                result.insert(result.end(), subtours[subtourIndex].rbegin(), subtours[subtourIndex].rend());
-            }
-        }
-        //        cout << "Result move" << endl;
-        //        printVector(result);
-        
-        /*for (auto isUsed : isSubtourUsed)
-         {
-         assert(isUsed);
-         }*/
-        
-        return result;
-    }
-    
-    
-    vector<int> linKernighanMove2(const vector<int> &move, int moveSize, const vector<int> &tour) {
-        //        cout << "Moves" << endl;
-        //        printVector(move);
-        //
-        //        cout << "Tour" << endl;
-        //        printVector(tour);
-        vector<vector<int>> subtours;
-        vector<int> inverseSubtours(tour.size(), -1);
-        vector<int> splitIndexes;
-        vector<bool> isSubtourUsed;
-        splitIndexes.reserve(100);
-        
-        for (int i = 0; i < moveSize; i += 2) {
-            splitIndexes.push_back((move[i] + 1) % tour.size() == move[i + 1] ? move[i] : move[i + 1]);
-        }
-        if (splitIndexes[(int)splitIndexes.size() - 1] != tour.size() - 1) {
-            splitIndexes.push_back((int)tour.size() - 1);
-        }
-        sort(splitIndexes.begin(), splitIndexes.end());
-        
-        int lastSplitIndex = -1;
-        for (auto splitIndex : splitIndexes) {
-            vector<int> subtour(tour.begin() + (lastSplitIndex + 1), tour.begin() + splitIndex + 1);
-            if (subtour.size() > 0) {
-                subtours.push_back(subtour);
-                isSubtourUsed.push_back(false);
-                inverseSubtours[lastSplitIndex + 1] = (int)subtours.size() - 1;
-                inverseSubtours[splitIndex] = (int)subtours.size() - 1;
-            }
-            lastSplitIndex = splitIndex;
-        }
-        
-        // Construct tour
-        vector<int> result = subtours[0];
-        isSubtourUsed[0] = true;
-        while (result.size() < tour.size()) {
-            auto index = find(tour.begin(), tour.end(), result[result.size() - 1]) - tour.begin();
-            auto moveIndex = find(move.begin(), move.begin() + moveSize, index) - move.begin();
-            if (moveIndex >= moveSize) return vector<int>();
-            auto connectIndex = move[(moveIndex + (moveIndex % 2 == 0 ? moveSize - 1 : 1)) % moveSize];
-            auto subtourIndex = inverseSubtours[connectIndex];
-            if (subtourIndex == -1) {
-                return vector<int>();
-            }
-            if (isSubtourUsed[subtourIndex]) return vector<int>();
-            isSubtourUsed[subtourIndex] = true;
-            if (find(tour.begin(), tour.end(), subtours[subtourIndex][0]) - tour.begin() == connectIndex) {
-                result.insert(result.end(), subtours[subtourIndex].begin(), subtours[subtourIndex].end());
-            }
-            else {
-                result.insert(result.end(), subtours[subtourIndex].rbegin(), subtours[subtourIndex].rend());
-            }
-        }
-        //        cout << "Result move" << endl;
-        //        printVector(result);
-        
-        /*for (auto isUsed : isSubtourUsed)
-         {
-         assert(isUsed);
-         }*/
-        
-        return result;
-    }
-    
     vector<int> linKernighanMove3(const vector<int> &move, int moveSize, const vector<int> &tour, const vector<int> &reverseTour) {
         vector<int> inverseSubtours(tour.size(), -1);
         vector<pair<int, int>> subtourIndexes;
         vector<int> splitIndexes;
-        vector<bool> isSubtourUsed;
         splitIndexes.reserve(10);
         
         for (int i = 0; i < moveSize; i += 2) {
@@ -1336,20 +1105,48 @@ public:
         for (auto splitIndex : splitIndexes) {
             if (lastSplitIndex+1 <= splitIndex) {
                 subtourIndexes.push_back(pair<int, int>(lastSplitIndex+1, splitIndex));
-                isSubtourUsed.push_back(false);
                 inverseSubtours[lastSplitIndex + 1] = (int)subtourIndexes.size() - 1;
                 inverseSubtours[splitIndex] = (int)subtourIndexes.size() - 1;
             }
             lastSplitIndex = splitIndex;
         }
+        vector<bool> isSubtourUsed(subtourIndexes.size(), false);
+        int lastIndex = subtourIndexes[0].second;
+        isSubtourUsed[0] = true;
+        int size = subtourIndexes[0].second - subtourIndexes[0].first + 1;
+        while (size < tour.size()) {
+            auto index = lastIndex;
+            auto moveIndex = find(move.begin(), move.begin() + moveSize, index) - move.begin();
+            if (moveIndex >= moveSize) return vector<int>();
+            auto connectIndex = move[(moveIndex + (moveIndex % 2 == 0 ? moveSize - 1 : 1)) % moveSize];
+            auto subtourIndex = inverseSubtours[connectIndex];
+            if (subtourIndex == -1) {
+                return vector<int>();
+            }
+            if (isSubtourUsed[subtourIndex]) return vector<int>();
+            isSubtourUsed[subtourIndex] = true;
+            if (subtourIndexes[subtourIndex].first == connectIndex) {
+                lastIndex = subtourIndexes[subtourIndex].second;
+            } else {
+                lastIndex = subtourIndexes[subtourIndex].first;
+            }
+            size += subtourIndexes[subtourIndex].second - subtourIndexes[subtourIndex].first + 1;
+        }
+        
+        for (int i = 0; i < isSubtourUsed.size(); i++) {
+            isSubtourUsed[i] = false;
+        }
+        
         
         // Construct tour
         vector<int> result;
+        result.reserve(tour.size());
         for (auto sub: subtourIndexes) {
-//            cout << sub.first << ", " << sub.second << endl;
+            //            cout << sub.first << ", " << sub.second << endl;
         }
         result.insert(result.end(), tour.begin() + subtourIndexes[0].first, tour.begin() + subtourIndexes[0].second+1);
         isSubtourUsed[0] = true;
+        
         while (result.size() < tour.size()) {
             auto index = reverseTour[result[result.size()-1]];
             auto moveIndex = find(move.begin(), move.begin() + moveSize, index) - move.begin();
@@ -1361,202 +1158,87 @@ public:
             }
             if (isSubtourUsed[subtourIndex]) return vector<int>();
             isSubtourUsed[subtourIndex] = true;
-            
-            if (reverseTour[subtourIndexes[subtourIndex].first] == connectIndex) {
-                
-            }
-            
-            if (reverseTour[tour[subtourIndexes[subtourIndex].first]] == connectIndex) {
+            if (subtourIndexes[subtourIndex].first == connectIndex) {
                 result.insert(result.end(), tour.begin() + subtourIndexes[subtourIndex].first, tour.begin() + subtourIndexes[subtourIndex].second + 1);
-            }
-            else {
-//                return vector<int>();
+            } else {
                 vector<int> tmp(tour.begin() + subtourIndexes[subtourIndex].first, tour.begin() + subtourIndexes[subtourIndex].second+1);
-//                result.insert(result.end(), tour.begin() + subtourIndexes[subtourIndex].second, tour.begin() + subtourIndexes[subtourIndex].first+1);
                 result.insert(result.end(), tmp.rbegin(), tmp.rend());
             }
         }
+        
         //        cout << "Result move" << endl;
         //        printVector(result);
-//        cout << "em" << endl;
-//        assert(result.size() == tour.size());
-//        for (auto isUsed : isSubtourUsed)
-//         {
-//         assert(isUsed);
-//         }
+        //        cout << "em" << endl;
+        //        assert(result.size() == tour.size());
+        //        for (auto isUsed : isSubtourUsed)
+        //         {
+        //         assert(isUsed);
+        //         }
         
         return result;
     }
-
     
-//    // Best algorithm for tsp known to man
-//    void linKernighan(vector<int> &tour) {
-//        
-//        int size = (int)tour.size();
-//        const auto next = [&](int i) { return mod(i + 1, size); };
-//        const auto prev = [&](int i) { return mod(i - 1, size); };
-//        bool didImprove = true;
-//        vector<int> t(size, -1);
-//        int i = 0;
-//        int iterations = 0;
-//        int moves = 0;
-//        int successfulMoves = 0;
-//        while (true) {
-//            iterations++;
-//            if (i % 2 == 0) {
-//                if (i > 6) {
-//                    i--;
-//                    t[i]++;
-//                    continue;
-//                }
-//                t[i]++;
-//                if (t[i] == tour.size()) {
-//                    t[i] = -1;
-//                    if (i == 0) {
-//                        break;
-//                    }
-//                    i--;
-//                    continue;
-//                }
-////                if (find(t.begin(), t.begin() + i, t[i]) != t.begin() + i) {
-////                    continue;
-////                }
-//                if (i >= 2) {
-//                    if (t[i] == next(t[i - 1]) || t[i] == prev(t[i - 1]) || t[i] == t[i - 1] || dist(tour[t[i - 1]], tour[t[i - 2]]) - dist(tour[t[i]], tour[t[i - 1]]) <= 0) {
-//                        continue;
-//                    }
-//                }
-//            }
-//            else {
-//                if (t[i] == -1) {
-//                    t[i] = next(t[i - 1]);
-//                }
-//                else if (t[i] == next(t[i - 1])) {
-//                    t[i] = prev(t[i - 1]);
-//                }
-//                else {
-//                    t[i] = -1;
-//                    i--;
-//                    continue;
-//                }
-//                if (find(t.begin(), t.begin() + i, t[i]) != t.begin() + i) {
-//                    continue;
-//                }
-//                if (i >= 2) {
-//                    // Ended tour??
-//                    if (t[i] == next(t[0]) || t[i] == prev(t[0]) || t[i] == t[0]) {
-//                        continue;
-//                    }
-//                    int gain = 0;
-//                    for (int j = 0; j < i; j++) {
-//                        gain += dist(tour[t[j]], tour[t[j + 1]]) * (j % 2 == 0 ? 1 : -1);
-//                    }
-//                    
-//                    gain -= dist(tour[t[i]], tour[t[0]]);
-//                    
-//                    // Check if better tour was constructed
-//                    if (gain > 0) {
-//                        auto bef = tourDistance(tour);
-//                        auto potentialTour = linKernighanMove2(t, i+1, tour);
-//                        moves++;
-//                        
-//                        if (potentialTour.size() != 0) {
-//                            //cout << "Valid:" << endl;
-//                            //for (int j = 0; j < t.size(); j += 2){
-//                            //	if (next(t[j]) == t[j + 1])
-//                            //		cout << "next ";
-//                            //	else if (prev(t[j]) == t[j + 1])
-//                            //		cout << "prev ";
-//                            //	//else
-//                            //	//	cout << "What ";
-//                            //	//								cout << ((next(t[j]) == t[j + 1]) ? "next " : "prev ");
-//                            //}
-//                            //cout << endl;
-//                            
-//                            
-//                            tour = potentialTour;
-//                            didImprove = true;
-//
-//                            for (int i = 0; i < t.size(); i++) {
-//                                t[i] = -1;
-//                            }
-//                            i = -1;
-//                            successfulMoves++;
-//                        }
-//                        auto af = tourDistance(tour);
-//                        assert(bef >= af);
-//                    }
-//                }
-//            }
-//            i++;
-//            if (i == tour.size()) {
-//                i--;
-//            }
-//        }
-//        
-//        //cout << "Number of moves " << moves << endl;
-//        //cout << "Number of successful moves " << successfulMoves << endl;
-//        
-//    }
-//
+    
+    
     // Best algorithm for tsp known to man
     void linKernighan2(vector<int> &tour) {
-        
         vector<int> reverseTour(tour.size());
         for (int i = 0; i < tour.size(); i++) {
             reverseTour[tour[i]] = i;
         }
-        
         int size = (int)tour.size();
         const auto next = [&](int i) { return mod(i + 1, size); };
         const auto prev = [&](int i) { return mod(i - 1, size); };
         bool didImprove = true;
         vector<int> t(size, -1);
-        vector<int> tNeighbor(size, -1);
+        vector<int> tNeighbor(size, 0);
+        vector<double> gains(size, 0);
         int i = 0;
         int iterations = 0;
         int moves = 0;
         int successfulMoves = 0;
         while (true) {
             iterations++;
-            if (timeIsRunningOut()) {
-                return;
-            }
+            //            if (timeIsRunningOut()) {
+            //                return;
+            //            }
             if (i % 2 == 0) {
-                if (i > 6) {
+                if (i > 8) {
                     i--;
                     continue;
                 }
-                
-                
                 if (i >= 2) {
                     tNeighbor[i]++;
-                    int neighbor = this->neighbors[tour[t[i-1]]][tNeighbor[i]];
-                    t[i] = (int)(find(tour.begin(), tour.end(), neighbor) - tour.begin());
-//                    t[i] = reverseTour[neighbor];
                     if (tNeighbor[i] == 8) {
-                        tNeighbor[i] = -1;
+                        tNeighbor[i] = 0;
                         i--;
                         continue;
                     }
+                    
+                    int neighbor = this->neighbors[tour[t[i-1]]][tNeighbor[i]];
+//                    t[i] = find(tour.begin(), tour.end(), neighbor) - tour.begin();
+                    t[i] = reverseTour[neighbor];
                     if (t[i] == next(t[i - 1]) || t[i] == prev(t[i - 1]) || t[i] == t[i - 1]) {
                         continue;
-                    } else if (dist(tour[t[i - 1]], tour[t[i - 2]]) - dist(tour[t[i]], tour[t[i - 1]]) - 0.00001 <= 0) {
-
-//                        cout << "Got worse " << tNeighbor[i] << endl;
-                        tNeighbor[i] = -1;
+                    }
+                    
+                    auto xDistance = dist(tour[t[i - 1]], tour[t[i - 2]]);
+                    auto yDistance = dist(tour[t[i]], tour[t[i - 1]]);
+                    auto gain = xDistance - yDistance;
+                    gains[i] = gains[i-2] + gain;
+                    if (gains[i] <= 0) {
+                        tNeighbor[i] = 0;
                         i--;
-
                         continue;
                     }
+                    
                 } else {
                     t[i]++;
                     if (t[i] == tour.size()) {
                         break;
                     }
                 }
-            }
-            else {
+            } else {
                 if (t[i] == -1) {
                     t[i] = next(t[i - 1]);
                 }
@@ -1572,52 +1254,52 @@ public:
                     continue;
                 }
                 if (i >= 2) {
-                
+                    
                     // Ended tour??
                     if (t[i] == next(t[0]) || t[i] == prev(t[0]) || t[i] == t[0]) {
                         continue;
                     }
-                    int gain = 0;
-                    for (int j = 0; j < i; j++) {
-                        gain += dist(tour[t[j]], tour[t[j + 1]]) * (j % 2 == 0 ? 1 : -1);
-                    }
+//                    double gain = 0;
+//                    for (int j = 0; j < i; j++) {
+//                        auto distance = dist(tour[t[j]], tour[t[j + 1]]);
+//                        gain += distance * (j % 2 == 0 ? 1 : -1);
+//                    }
                     
-                    gain -= dist(tour[t[i]], tour[t[0]]);
-
+//                    double lastGain = -dist(tour[t[i]], tour[t[i-1]]);
+//                    double gain2 = gain + lastGain;
+                    
+//                    double doubleThreshold = 0.00000001;
+//                    assert(gain2 - gains[i-1] < doubleThreshold  && gain2 - gains[i-1] > -doubleThreshold);
+//                    gain -= dist(tour[t[i]], tour[t[0]]);
+                    
+                    double tourDist = gains[i-1] + dist(tour[t[i]], tour[t[i-1]]) - dist(tour[t[i]], tour[t[0]]);
+//                    assert(tourDist - gain < doubleThreshold && tourDist - gain > -doubleThreshold);
                     
                     // Check if better tour was constructed
-                    if (gain > 0.000000001) {
+                    if (tourDist > 0.000000001) {
                         auto potentialTour = linKernighanMove3(t, i+1, tour, reverseTour);
-//                        auto potentialTour = linKernighanMove2(t, i+1, tour);
-                        auto bef = tourDistance(tour);
+                        //                        auto potentialTour = linKernighanMove2(t, i+1, tour);
                         moves++;
                         if (potentialTour.size() != 0) {
-                            //cout << "Valid:" << endl;
-                            //for (int j = 0; j < t.size(); j += 2){
-                            //	if (next(t[j]) == t[j + 1])
-                            //		cout << "next ";
-                            //	else if (prev(t[j]) == t[j + 1])
-                            //		cout << "prev ";
-                            //	//else
-                            //	//	cout << "What ";
-                            //	//								cout << ((next(t[j]) == t[j + 1]) ? "next " : "prev ");
-                            //}
-                            //cout << endl;
-
+                            auto bef = tourDistance(tour);
                             tour = potentialTour;
+                            auto af = tourDistance(tour);
+                            assert(bef >= af);
                             for (int i = 0; i < tour.size(); i++) {
                                 reverseTour[tour[i]] = i;
                             }
                             didImprove = true;
                             for (int j = 0; j <= i; j++) {
                                 t[j] = -1;
-                                tNeighbor[j] = -1;
+                                tNeighbor[j] = 0;
                             }
                             i = -1;
                             successfulMoves++;
+                        } else {
+                            //                            cerr << "Did not work" << endl;
+                            //                            printVector(t);
                         }
-                        auto af = tourDistance(tour);
-                        assert(bef >= af);
+                        
                     }
                 }
             }
@@ -1631,84 +1313,13 @@ public:
         cerr << "Number of successful moves " << successfulMoves << endl;
         
     }
-
+    
 };
 
 
-//int main(int argc, char **argv) {
-//#ifdef DEBUG
-//    auto instance = TravelingSalesmanProblem::createRandom(600);
-//#else
-//    auto instance = TravelingSalesmanProblem::createFromStdin();
-//#endif
-//    if (instance->points == 1) {
-//        cout << 0;
-//        return 0;
-//    }
-//    vector<int> greedyTour = instance->greedy();
-////    random_shuffle(greedyTour.begin(), greedyTour.end());
-//    vector<int> linKernighanTour = greedyTour;
-//    auto kopt2Tour = linKernighanTour;
-//    auto kopt3Tour = linKernighanTour;
-//    instance->linKernighan2(linKernighanTour);
-//
-//
-//    instance->kopt3neighbors2opt(linKernighanTour, 50);
-//    instance->kopt2neighbors(linKernighanTour);
-//
-//    instance->kopt3neighbors2opt(kopt3Tour, 50);
-//    instance->kopt2neighbors(kopt2Tour);
-//
-//    
-//    vector<int> minimumTour = linKernighanTour;
-//    
-//    int iterations = 0;
-//    double minimumDistance = 99999999999;
-//    
-////        while (!timeIsRunningOut()) {
-////            if (iterations > 10) {
-////                break;
-////            }
-////
-////            instance->kopt3neighbors2opt(greedyTour, 50);
-////            instance->kopt2neighborsopt(greedyTour);
-////            double distance = instance->tourDistance(greedyTour);
-////            if (distance < minimumDistance) {
-////                minimumDistance = distance;
-////                minimumTour = greedyTour;
-////            }
-////    
-////            if (iterations < instance->points) {
-////                greedyTour = instance->nearestNeighbor(iterations);
-////            } else {
-////                random_shuffle(greedyTour.begin(), greedyTour.end());
-////            }
-////            iterations++;
-////        }
-//    
-//    for (auto i: minimumTour) {
-//        cout << i << endl;
-//    }
-//    
-//    for (int i = 0; i < instance->points; i++) {
-//        assert(find(minimumTour.begin(), minimumTour.end(), i) != minimumTour.end());
-//    }
-//    
-//    cerr << "Greedy \t\t\t" << instance->tourDistance(greedyTour) << endl;
-//    cerr << "2-opt\t\t\t" << instance->tourDistance(kopt2Tour) << endl;
-//    cerr << "3-opt\t\t\t" << instance->tourDistance(kopt3Tour) << endl;
-//    cerr << "Lin kernighan\t" << instance->tourDistance(linKernighanTour) << endl;
-//    auto endTime = chrono::high_resolution_clock::now();
-//    auto duration = (endTime - startTime);
-//    cerr << "Time: " << duration.count() / 1e9 << endl;
-////    cerr << "Iterations: " << iterations << endl;
-//    delete instance;
-//    return 0;
-//}
-
 int main(int argc, char **argv) {
 #ifdef DEBUG
-    auto instance = TravelingSalesmanProblem::createRandom(500);
+    auto instance = TravelingSalesmanProblem::createRandom(1000);
 #else
     auto instance = TravelingSalesmanProblem::createFromStdin();
 #endif
@@ -1717,39 +1328,115 @@ int main(int argc, char **argv) {
         return 0;
     }
     vector<int> greedyTour = instance->greedy();
-    vector<int> minimumTour = greedyTour;
+//    random_shuffle(greedyTour.begin(), greedyTour.end());
+    vector<int> linKernighanTour = greedyTour;
+    auto kopt2Tour = linKernighanTour;
+    auto kopt3Tour = linKernighanTour;
+
+//    instance->kopt3neighbors2opt(linKernighanTour, 10);
+
+    instance->linKernighan2(linKernighanTour);
+//    instance->kopt2neighbors(linKernighanTour);
+
+
+
+    instance->kopt3neighbors2opt(kopt3Tour, 50);
+    instance->kopt2neighbors(kopt2Tour);
+
+
+    vector<int> minimumTour = linKernighanTour;
+
     int iterations = 0;
     double minimumDistance = 99999999999;
-    
-    while (!timeIsRunningOut()) {
-        if (iterations > 3) {
-            break;
-        }
-        instance->linKernighan2(greedyTour);
-//        instance->kopt3neighbors2opt(greedyTour, 50);
-//        instance->kopt2neighborsopt(greedyTour);
-        double distance = instance->tourDistance(greedyTour);
-        if (distance < minimumDistance) {
-            minimumDistance = distance;
-            minimumTour = greedyTour;
-        }
-        
-        if (iterations < instance->points) {
-            greedyTour = instance->nearestNeighbor(instance->points - iterations - 1);
-        } else {
-            random_shuffle(greedyTour.begin(), greedyTour.end());
-        }
-        iterations++;
-    }
-    
-    
+
+//        while (!timeIsRunningOut()) {
+//            if (iterations > 10) {
+//                break;
+//            }
+//
+//            instance->kopt3neighbors2opt(greedyTour, 50);
+//            instance->kopt2neighborsopt(greedyTour);
+//            double distance = instance->tourDistance(greedyTour);
+//            if (distance < minimumDistance) {
+//                minimumDistance = distance;
+//                minimumTour = greedyTour;
+//            }
+//
+//            if (iterations < instance->points) {
+//                greedyTour = instance->nearestNeighbor(iterations);
+//            } else {
+//                random_shuffle(greedyTour.begin(), greedyTour.end());
+//            }
+//            iterations++;
+//        }
+
     for (auto i: minimumTour) {
         cout << i << endl;
     }
-    cerr << "Tour length: " << instance->tourDistance(minimumTour) << endl;
+
+    for (int i = 0; i < instance->points; i++) {
+        assert(find(minimumTour.begin(), minimumTour.end(), i) != minimumTour.end());
+    }
+
+    cerr << "Greedy \t\t\t" << instance->tourDistance(greedyTour) << endl;
+    cerr << "2-opt\t\t\t" << instance->tourDistance(kopt2Tour) << endl;
+    cerr << "3-opt\t\t\t" << instance->tourDistance(kopt3Tour) << endl;
+    cerr << "Lin kernighan\t" << instance->tourDistance(linKernighanTour) << endl;
     auto endTime = chrono::high_resolution_clock::now();
     auto duration = (endTime - startTime);
     cerr << "Time: " << duration.count() / 1e9 << endl;
+//    cerr << "Iterations: " << iterations << endl;
     delete instance;
     return 0;
 }
+
+//int main(int argc, char **argv) {
+//#ifdef DEBUG
+//    auto instance = TravelingSalesmanProblem::createRandom(1000);
+//#else
+//    auto instance = TravelingSalesmanProblem::createFromStdin();
+//#endif
+//    if (instance->points == 1) {
+//        cout << 0;
+//        return 0;
+//    }
+//    vector<int> greedyTour = instance->greedy();
+//    vector<int> minimumTour = greedyTour;
+//    int iterations = 0;
+//    double minimumDistance = 99999999999;
+//    
+//    while (!timeIsRunningOut()) {
+//#ifdef DEBUG
+//        if (iterations > 3) {
+//            break;
+//        }
+//#endif
+//
+//        instance->kopt3neighbors2opt(greedyTour, 50);
+//        instance->linKernighan2(greedyTour);
+//        instance->kopt2neighbors(greedyTour);
+//        double distance = instance->tourDistance(greedyTour);
+//        if (distance < minimumDistance) {
+//            minimumDistance = distance;
+//            minimumTour = greedyTour;
+//        }
+//        
+//        if (iterations < instance->points) {
+//            greedyTour = instance->nearestNeighbor(instance->points - iterations - 1);
+//        } else {
+//            random_shuffle(greedyTour.begin(), greedyTour.end());
+//        }
+//        iterations++;
+//    }
+//    
+//    
+//    for (auto i: minimumTour) {
+//        cout << i << endl;
+//    }
+//    cerr << "Tour length: " << instance->tourDistance(minimumTour) << endl;
+//    auto endTime = chrono::high_resolution_clock::now();
+//    auto duration = (endTime - startTime);
+//    cerr << "Time: " << duration.count() / 1e9 << endl;
+//    delete instance;
+//    return 0;
+//}

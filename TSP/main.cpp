@@ -1533,6 +1533,7 @@ public:
                     tNeighbor[i]++;
                     int neighbor = this->neighbors[tour[t[i-1]]][tNeighbor[i]];
                     t[i] = (int)(find(tour.begin(), tour.end(), neighbor) - tour.begin());
+//                    t[i] = reverseTour[neighbor];
                     if (tNeighbor[i] == 8) {
                         tNeighbor[i] = -1;
                         i--;
@@ -1725,8 +1726,8 @@ int main(int argc, char **argv) {
             break;
         }
         instance->linKernighan2(greedyTour);
-        instance->kopt3neighbors2opt(greedyTour, 50);
-        instance->kopt2neighborsopt(greedyTour);
+//        instance->kopt3neighbors2opt(greedyTour, 50);
+//        instance->kopt2neighborsopt(greedyTour);
         double distance = instance->tourDistance(greedyTour);
         if (distance < minimumDistance) {
             minimumDistance = distance;
